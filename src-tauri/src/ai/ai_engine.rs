@@ -363,7 +363,8 @@ impl AIEngine {
     }
 }
 
-// 包含属性测试
-#[cfg(test)]
-#[path = "ai_engine_property_tests.rs"]
-mod ai_engine_property_tests;
+// 属性测试已移动到 tests/ 目录
+// #[cfg(test)]
+// #[path = "ai_engine_property_tests.rs"]
+// mod ai_engine_property_tests;
+

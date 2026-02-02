@@ -7,8 +7,9 @@ pub mod board_state;
 pub mod game_status;
 pub mod move_result;
 
-#[cfg(test)]
-mod board_state_property_tests;
+// 属性测试已移动到 tests/ 目录
+// #[cfg(test)]
+// mod board_state_property_tests;
 
 // 重新导出常用类型
 pub use position::Position;

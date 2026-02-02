@@ -1350,7 +1350,8 @@ mod tests {
 }
 
 
-// 包含属性测试
-#[cfg(test)]
-#[path = "junqi_engine_property_tests.rs"]
-mod junqi_engine_property_tests;
+// 属性测试已移动到 tests/ 目录
+// #[cfg(test)]
+// #[path = "junqi_engine_property_tests.rs"]
+// mod junqi_engine_property_tests;
+

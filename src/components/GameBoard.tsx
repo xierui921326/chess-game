@@ -240,7 +240,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameType, onBackToMenu }) => {
     );
   }
 
-  const canUndo = gameState.board_state.move_history.length > 0;
+  const canUndo = gameState.board_state.move_history && gameState.board_state.move_history.length > 0;
   const gameOver = isGameOver(gameState.game_status);
 
   return (

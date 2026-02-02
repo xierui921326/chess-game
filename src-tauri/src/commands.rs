@@ -6,6 +6,15 @@ use crate::game_session::{GAME_SESSION_MANAGER, GameType};
 use crate::game_engine::{GameEngine, GameError};
 use crate::ai::{AIEngine, Difficulty};
 use crate::error_logger::log_error;
+use serde::{Serialize, Deserialize};
+
+/// 游戏状态响应结构体
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GameStateResponse {
+    pub game_id: String,
+    pub board_state: BoardState,
+    pub game_status: GameStatus,
+}
 
 /// 开始新游戏
 /// 
@@ -13,10 +22,10 @@ use crate::error_logger::log_error;
 /// - `game_type`: 游戏类型（"xiangqi"/"象棋" 或 "junqi"/"军棋"）
 /// 
 /// # 返回
-/// - 成功：返回游戏 ID
+/// - 成功：返回游戏状态（包含游戏 ID、棋盘状态和游戏状态）
 /// - 失败：返回错误消息
 #[tauri::command]
-pub fn start_new_game(game_type: String) -> Result<String, String> {
+pub fn start_new_game(game_type: String) -> Result<GameStateResponse, String> {
     // 解析游戏类型
     let game_type_enum = match game_type.to_lowercase().as_str() {
         "xiangqi" | "象棋" => GameType::Xiangqi,
@@ -31,12 +40,35 @@ pub fn start_new_game(game_type: String) -> Result<String, String> {
     };
 
     // 创建新的游戏会话
-    GAME_SESSION_MANAGER.create_session(game_type_enum)
+    let game_id = GAME_SESSION_MANAGER.create_session(game_type_enum)
         .map_err(|e| {
             let error = GameError::IPCError { message: e };
             log_error(&error, None);
             error.user_message()
+        })?;
+
+    // 获取初始游戏状态
+    let game_id_clone = game_id.clone();
+    GAME_SESSION_MANAGER.with_session(&game_id, |session| {
+        let (board_state, game_status) = match session {
+            crate::game_session::GameSession::Xiangqi(engine) => {
+                (engine.get_board_state().clone(), engine.get_game_status())
+            }
+            crate::game_session::GameSession::Junqi(engine) => {
+                (engine.get_board_state().clone(), engine.get_game_status())
+            }
+        };
+
+        Ok(GameStateResponse {
+            game_id: game_id_clone,
+            board_state,
+            game_status,
         })
+    }).map_err(|e| {
+        let error = GameError::IPCError { message: e };
+        log_error(&error, None);
+        error.user_message()
+    })
 }
 
 /// 获取指定位置棋子的合法走法
@@ -180,10 +212,10 @@ pub fn make_ai_move(game_id: String) -> Result<(Position, Position, BoardState),
 /// - `game_id`: 游戏 ID
 /// 
 /// # 返回
-/// - 成功：返回悔棋后的棋盘状态
+/// - 成功：返回悔棋后的游戏状态
 /// - 失败：返回错误消息
 #[tauri::command]
-pub fn undo_move(game_id: String) -> Result<BoardState, String> {
+pub fn undo_move(game_id: String) -> Result<GameStateResponse, String> {
     GAME_SESSION_MANAGER.with_session_mut(&game_id, |session| {
         match session {
             crate::game_session::GameSession::Xiangqi(engine) => {
@@ -193,7 +225,11 @@ pub fn undo_move(game_id: String) -> Result<BoardState, String> {
                         log_error(&e, Some(&board_state));
                         e.user_message()
                     })?;
-                Ok(engine.get_board_state().clone())
+                Ok(GameStateResponse {
+                    game_id: game_id.clone(),
+                    board_state: engine.get_board_state().clone(),
+                    game_status: engine.get_game_status(),
+                })
             }
             crate::game_session::GameSession::Junqi(engine) => {
                 let board_state = engine.get_board_state().clone();
@@ -202,7 +238,11 @@ pub fn undo_move(game_id: String) -> Result<BoardState, String> {
                         log_error(&e, Some(&board_state));
                         e.user_message()
                     })?;
-                Ok(engine.get_board_state().clone())
+                Ok(GameStateResponse {
+                    game_id: game_id.clone(),
+                    board_state: engine.get_board_state().clone(),
+                    game_status: engine.get_game_status(),
+                })
             }
         }
     }).map_err(|e| {
@@ -218,21 +258,29 @@ pub fn undo_move(game_id: String) -> Result<BoardState, String> {
 /// - `game_id`: 游戏 ID
 /// 
 /// # 返回
-/// - 成功：返回新游戏的棋盘状态
+/// - 成功：返回新游戏的游戏状态
 /// - 失败：返回错误消息
 #[tauri::command]
-pub fn restart_game(game_id: String) -> Result<BoardState, String> {
+pub fn restart_game(game_id: String) -> Result<GameStateResponse, String> {
     GAME_SESSION_MANAGER.with_session_mut(&game_id, |session| {
         match session {
             crate::game_session::GameSession::Xiangqi(engine) => {
                 // 创建新的象棋引擎
                 *engine = crate::game_engine::XiangqiEngine::new_game();
-                Ok(engine.get_board_state().clone())
+                Ok(GameStateResponse {
+                    game_id: game_id.clone(),
+                    board_state: engine.get_board_state().clone(),
+                    game_status: engine.get_game_status(),
+                })
             }
             crate::game_session::GameSession::Junqi(engine) => {
                 // 创建新的军棋引擎
                 *engine = crate::game_engine::JunqiEngine::new_game();
-                Ok(engine.get_board_state().clone())
+                Ok(GameStateResponse {
+                    game_id: game_id.clone(),
+                    board_state: engine.get_board_state().clone(),
+                    game_status: engine.get_game_status(),
+                })
             }
         }
     }).map_err(|e| {

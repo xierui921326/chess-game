@@ -5,9 +5,9 @@ pub mod game_engine_trait;
 pub mod xiangqi_engine;
 pub mod junqi_engine;
 
-// 测试模块
-#[cfg(test)]
-mod xiangqi_engine_property_tests;
+// 属性测试已移动到 tests/ 目录
+// #[cfg(test)]
+// mod xiangqi_engine_property_tests;
 
 // 重新导出
 pub use game_engine_trait::{GameEngine, GameError, GameResult};

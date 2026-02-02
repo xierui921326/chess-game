@@ -129,10 +129,10 @@ pub fn log_error(error: &GameError, game_state: Option<&BoardState>) {
     }
 }
 
-// 属性测试模块
-#[cfg(test)]
-#[path = "error_logger_property_tests.rs"]
-mod error_logger_property_tests;
+// 属性测试已移动到 tests/ 目录
+// #[cfg(test)]
+// #[path = "error_logger_property_tests.rs"]
+// mod error_logger_property_tests;
 
 #[cfg(test)]
 mod tests {

@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 26be86276fc72dc3fddcbb7beaa6f7ed442d2ca37164b236f26343e0dac61dca # shrinks to error = IllegalMove { from: Position { row: 0, col: 1 }, to: Position { row: 4, col: 6 }, reason: "目标位置被己方棋子占据" }

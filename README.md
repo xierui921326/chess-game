@@ -6,7 +6,7 @@
 
 **✅ 已完成** - 所有功能已实现，测试覆盖率 100%（318 个测试全部通过）
 
-详细信息请查看 [PROJECT_SUMMARY.md](./PROJECT_SUMMARY.md)
+详细信息请查看 [项目总结文档](./docs/PROJECT_SUMMARY.md)
 
 ## 技术栈
 
@@ -45,8 +45,12 @@
 │           ├── requirements.md  # 需求文档
 │           ├── design.md        # 设计文档
 │           └── tasks.md         # 任务列表
+├── docs/                   # 项目文档
+│   ├── PROJECT_SUMMARY.md  # 项目完成总结
+│   ├── CHANGELOG.md        # 更新日志
+│   ├── IMPROVEMENTS.md     # 项目改进说明
+│   └── WARNINGS_FIXED.md   # 编译警告修复说明
 ├── Makefile                # 常用命令快捷方式
-├── PROJECT_SUMMARY.md      # 项目完成总结
 └── README.md
 ```
 
@@ -141,11 +145,13 @@ npm run tauri build
 
 ## 文档
 
-- [PROJECT_SUMMARY.md](./PROJECT_SUMMARY.md) - 完整的项目总结
-- [CHANGELOG.md](./CHANGELOG.md) - 更新日志
-- [需求文档](./.kiro/specs/chess-game-app/requirements.md)
-- [设计文档](./.kiro/specs/chess-game-app/design.md)
-- [任务列表](./.kiro/specs/chess-game-app/tasks.md)
+- [项目总结](./docs/PROJECT_SUMMARY.md) - 完整的项目总结
+- [更新日志](./docs/CHANGELOG.md) - 项目更新历史
+- [改进说明](./docs/IMPROVEMENTS.md) - 项目重组和改进详情
+- [警告修复](./docs/WARNINGS_FIXED.md) - 编译警告修复说明
+- [需求文档](./.kiro/specs/chess-game-app/requirements.md) - 功能需求
+- [设计文档](./.kiro/specs/chess-game-app/design.md) - 技术设计
+- [任务列表](./.kiro/specs/chess-game-app/tasks.md) - 实施计划
 
 ## 推荐 IDE 设置
 

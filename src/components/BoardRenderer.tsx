@@ -20,10 +20,10 @@ const XIANGQI_COLS = 9;
 const JUNQI_ROWS = 12;
 const JUNQI_COLS = 5;
 
-// 绘制参数
-const CELL_SIZE = 60;
-const PADDING = 40;
-const PIECE_RADIUS = 25;
+// 绘制参数 - 调整为更小的尺寸以适应一屏
+const CELL_SIZE = 45; // 从 60 减小到 45
+const PADDING = 30;   // 从 40 减小到 30
+const PIECE_RADIUS = 18; // 从 25 减小到 18
 
 const BoardRenderer: React.FC<BoardRendererProps> = ({
   boardState,
@@ -80,7 +80,7 @@ const BoardRenderer: React.FC<BoardRendererProps> = ({
   // 绘制网格
   const drawGrid = (ctx: CanvasRenderingContext2D, rows: number, cols: number) => {
     ctx.strokeStyle = '#000';
-    ctx.lineWidth = 1;
+    ctx.lineWidth = 1.5;
 
     // 绘制横线
     for (let i = 0; i < rows; i++) {
@@ -92,19 +92,35 @@ const BoardRenderer: React.FC<BoardRendererProps> = ({
 
     // 绘制竖线
     for (let i = 0; i < cols; i++) {
-      ctx.beginPath();
-      ctx.moveTo(PADDING + i * CELL_SIZE, PADDING);
-      ctx.lineTo(PADDING + i * CELL_SIZE, PADDING + (rows - 1) * CELL_SIZE);
-      ctx.stroke();
+      // 象棋中间断开（楚河汉界）
+      if (gameType === 'xiangqi') {
+        // 上半部分（0-4行）
+        ctx.beginPath();
+        ctx.moveTo(PADDING + i * CELL_SIZE, PADDING);
+        ctx.lineTo(PADDING + i * CELL_SIZE, PADDING + 4 * CELL_SIZE);
+        ctx.stroke();
+        
+        // 下半部分（5-9行）
+        ctx.beginPath();
+        ctx.moveTo(PADDING + i * CELL_SIZE, PADDING + 5 * CELL_SIZE);
+        ctx.lineTo(PADDING + i * CELL_SIZE, PADDING + (rows - 1) * CELL_SIZE);
+        ctx.stroke();
+      } else {
+        // 军棋完整竖线
+        ctx.beginPath();
+        ctx.moveTo(PADDING + i * CELL_SIZE, PADDING);
+        ctx.lineTo(PADDING + i * CELL_SIZE, PADDING + (rows - 1) * CELL_SIZE);
+        ctx.stroke();
+      }
     }
   };
 
   // 绘制象棋特殊标记
   const drawXiangqiSpecialMarks = (ctx: CanvasRenderingContext2D) => {
     ctx.strokeStyle = '#000';
-    ctx.lineWidth = 1;
+    ctx.lineWidth = 1.5;
 
-    // 绘制九宫格斜线（红方）
+    // 绘制九宫格斜线（黑方，上方，0-2行）
     ctx.beginPath();
     ctx.moveTo(PADDING + 3 * CELL_SIZE, PADDING);
     ctx.lineTo(PADDING + 5 * CELL_SIZE, PADDING + 2 * CELL_SIZE);
@@ -115,7 +131,7 @@ const BoardRenderer: React.FC<BoardRendererProps> = ({
     ctx.lineTo(PADDING + 3 * CELL_SIZE, PADDING + 2 * CELL_SIZE);
     ctx.stroke();
 
-    // 绘制九宫格斜线（黑方）
+    // 绘制九宫格斜线（红方，下方，7-9行）
     ctx.beginPath();
     ctx.moveTo(PADDING + 3 * CELL_SIZE, PADDING + 7 * CELL_SIZE);
     ctx.lineTo(PADDING + 5 * CELL_SIZE, PADDING + 9 * CELL_SIZE);
@@ -126,19 +142,84 @@ const BoardRenderer: React.FC<BoardRendererProps> = ({
     ctx.lineTo(PADDING + 3 * CELL_SIZE, PADDING + 9 * CELL_SIZE);
     ctx.stroke();
 
-    // 绘制楚河汉界
-    ctx.font = '16px Arial';
+    // 绘制楚河汉界（在第4-5行之间）
+    ctx.font = 'bold 14px SimSun, serif';
     ctx.fillStyle = '#000';
     ctx.textAlign = 'center';
-    ctx.fillText('楚河', PADDING + 2 * CELL_SIZE, PADDING + 4.7 * CELL_SIZE);
-    ctx.fillText('汉界', PADDING + 6 * CELL_SIZE, PADDING + 4.7 * CELL_SIZE);
+    ctx.textBaseline = 'middle';
+    
+    const riverY = PADDING + 4.5 * CELL_SIZE;
+    ctx.fillText('楚河', PADDING + 2 * CELL_SIZE, riverY);
+    ctx.fillText('汉界', PADDING + 6 * CELL_SIZE, riverY);
   };
 
   // 绘制军棋特殊标记
   const drawJunqiSpecialMarks = (ctx: CanvasRenderingContext2D) => {
-    // TODO: 实现军棋的营地、铁路线等特殊标记
-    ctx.strokeStyle = '#888';
     ctx.lineWidth = 2;
+
+    // 绘制铁路线（粗线）
+    ctx.strokeStyle = '#666';
+    
+    // 横向铁路线
+    const railwayRows = [1, 5, 6, 10];
+    railwayRows.forEach(row => {
+      ctx.beginPath();
+      ctx.moveTo(PADDING, PADDING + row * CELL_SIZE);
+      ctx.lineTo(PADDING + 4 * CELL_SIZE, PADDING + row * CELL_SIZE);
+      ctx.stroke();
+    });
+
+    // 竖向铁路线（左右两侧）
+    [0, 4].forEach(col => {
+      ctx.beginPath();
+      ctx.moveTo(PADDING + col * CELL_SIZE, PADDING + CELL_SIZE);
+      ctx.lineTo(PADDING + col * CELL_SIZE, PADDING + 10 * CELL_SIZE);
+      ctx.stroke();
+    });
+
+    // 绘制营地（用小圆圈标记）
+    ctx.fillStyle = 'rgba(100, 100, 100, 0.2)';
+    ctx.strokeStyle = '#666';
+    ctx.lineWidth = 1;
+    
+    // 黑方营地（上方）
+    const blackCamps = [
+      { row: 2, col: 1 }, { row: 2, col: 3 },
+      { row: 3, col: 2 }
+    ];
+    
+    // 红方营地（下方）
+    const redCamps = [
+      { row: 8, col: 2 },
+      { row: 9, col: 1 }, { row: 9, col: 3 }
+    ];
+
+    [...blackCamps, ...redCamps].forEach(camp => {
+      const x = PADDING + camp.col * CELL_SIZE;
+      const y = PADDING + camp.row * CELL_SIZE;
+      ctx.beginPath();
+      ctx.arc(x, y, 8, 0, 2 * Math.PI);
+      ctx.fill();
+      ctx.stroke();
+    });
+
+    // 绘制行营连线
+    ctx.strokeStyle = '#888';
+    ctx.lineWidth = 1;
+    
+    // 黑方行营
+    ctx.beginPath();
+    ctx.moveTo(PADDING + 1 * CELL_SIZE, PADDING + 2 * CELL_SIZE);
+    ctx.lineTo(PADDING + 2 * CELL_SIZE, PADDING + 3 * CELL_SIZE);
+    ctx.lineTo(PADDING + 3 * CELL_SIZE, PADDING + 2 * CELL_SIZE);
+    ctx.stroke();
+
+    // 红方行营
+    ctx.beginPath();
+    ctx.moveTo(PADDING + 1 * CELL_SIZE, PADDING + 9 * CELL_SIZE);
+    ctx.lineTo(PADDING + 2 * CELL_SIZE, PADDING + 8 * CELL_SIZE);
+    ctx.lineTo(PADDING + 3 * CELL_SIZE, PADDING + 9 * CELL_SIZE);
+    ctx.stroke();
   };
 
   // 绘制合法移动提示
@@ -148,7 +229,7 @@ const BoardRenderer: React.FC<BoardRendererProps> = ({
       const x = PADDING + pos.col * CELL_SIZE;
       const y = PADDING + pos.row * CELL_SIZE;
       ctx.beginPath();
-      ctx.arc(x, y, 10, 0, 2 * Math.PI);
+      ctx.arc(x, y, 8, 0, 2 * Math.PI);
       ctx.fill();
     });
   };
@@ -159,9 +240,9 @@ const BoardRenderer: React.FC<BoardRendererProps> = ({
     const y = PADDING + pos.row * CELL_SIZE;
     
     ctx.strokeStyle = '#ff0';
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 2.5;
     ctx.beginPath();
-    ctx.arc(x, y, PIECE_RADIUS + 5, 0, 2 * Math.PI);
+    ctx.arc(x, y, PIECE_RADIUS + 4, 0, 2 * Math.PI);
     ctx.stroke();
   };
 
@@ -185,7 +266,7 @@ const BoardRenderer: React.FC<BoardRendererProps> = ({
 
       // 绘制棋子文字
       ctx.fillStyle = '#fff';
-      ctx.font = 'bold 18px Arial';
+      ctx.font = 'bold 14px SimSun, serif'; // 调整字体大小
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       

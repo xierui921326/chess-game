@@ -149,6 +149,7 @@ npm run tauri build
 - [更新日志](./docs/CHANGELOG.md) - 项目更新历史
 - [改进说明](./docs/IMPROVEMENTS.md) - 项目重组和改进详情
 - [警告修复](./docs/WARNINGS_FIXED.md) - 编译警告修复说明
+- [UI 改进](./docs/UI_IMPROVEMENTS.md) - UI 显示优化记录
 - [需求文档](./.kiro/specs/chess-game-app/requirements.md) - 功能需求
 - [设计文档](./.kiro/specs/chess-game-app/design.md) - 技术设计
 - [任务列表](./.kiro/specs/chess-game-app/tasks.md) - 实施计划

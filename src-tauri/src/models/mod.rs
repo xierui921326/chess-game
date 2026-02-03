@@ -16,6 +16,6 @@ pub use position::Position;
 pub use piece::{Piece, Player, PieceType, XiangqiPiece, JunqiPiece};
 pub use board_state::{BoardState, Move};
 pub use game_status::GameStatus;
-pub use move_result::MoveResult;
+// pub use move_result::MoveResult; // 未使用，已注释
 
 // 注意：这些类型目前显示为未使用，但它们将在后续任务中被游戏引擎和命令模块使用

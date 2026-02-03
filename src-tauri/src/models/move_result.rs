@@ -2,6 +2,7 @@
 use serde::{Deserialize, Serialize};
 use super::{BoardState, GameStatus, Piece};
 
+#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MoveResult {
     pub success: bool,
@@ -10,6 +11,7 @@ pub struct MoveResult {
     pub captured_piece: Option<Piece>,
 }
 
+#[allow(dead_code)]
 impl MoveResult {
     pub fn new(
         success: bool,

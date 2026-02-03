@@ -30,6 +30,7 @@ impl GameSession {
     }
 
     /// 获取游戏类型
+    #[allow(dead_code)]
     pub fn game_type(&self) -> GameType {
         match self {
             GameSession::Xiangqi(_) => GameType::Xiangqi,
@@ -38,6 +39,7 @@ impl GameSession {
     }
 
     /// 获取象棋引擎的可变引用（如果是象棋游戏）
+    #[allow(dead_code)]
     pub fn as_xiangqi_mut(&mut self) -> Option<&mut XiangqiEngine> {
         match self {
             GameSession::Xiangqi(engine) => Some(engine),
@@ -46,6 +48,7 @@ impl GameSession {
     }
 
     /// 获取象棋引擎的引用（如果是象棋游戏）
+    #[allow(dead_code)]
     pub fn as_xiangqi(&self) -> Option<&XiangqiEngine> {
         match self {
             GameSession::Xiangqi(engine) => Some(engine),
@@ -54,6 +57,7 @@ impl GameSession {
     }
 
     /// 获取军棋引擎的可变引用（如果是军棋游戏）
+    #[allow(dead_code)]
     pub fn as_junqi_mut(&mut self) -> Option<&mut JunqiEngine> {
         match self {
             GameSession::Junqi(engine) => Some(engine),
@@ -62,6 +66,7 @@ impl GameSession {
     }
 
     /// 获取军棋引擎的引用（如果是军棋游戏）
+    #[allow(dead_code)]
     pub fn as_junqi(&self) -> Option<&JunqiEngine> {
         match self {
             GameSession::Junqi(engine) => Some(engine),
@@ -102,6 +107,8 @@ impl GameSessionManager {
     }
 
     /// 获取游戏会话的引用
+    /// 获取游戏会话的引用
+    #[allow(dead_code)]
     pub fn get_session(&self, game_id: &str) -> Result<Arc<Mutex<HashMap<String, GameSession>>>, String> {
         let sessions = self.sessions.lock()
             .map_err(|e| format!("无法获取会话锁: {}", e))?;
@@ -142,6 +149,7 @@ impl GameSessionManager {
     }
 
     /// 删除游戏会话
+    #[allow(dead_code)]
     pub fn remove_session(&self, game_id: &str) -> Result<(), String> {
         let mut sessions = self.sessions.lock()
             .map_err(|e| format!("无法获取会话锁: {}", e))?;
@@ -153,6 +161,7 @@ impl GameSessionManager {
     }
 
     /// 获取所有活动会话的数量
+    #[allow(dead_code)]
     pub fn session_count(&self) -> Result<usize, String> {
         let sessions = self.sessions.lock()
             .map_err(|e| format!("无法获取会话锁: {}", e))?;
@@ -161,6 +170,7 @@ impl GameSessionManager {
     }
 
     /// 清除所有会话
+    #[allow(dead_code)]
     pub fn clear_all_sessions(&self) -> Result<(), String> {
         let mut sessions = self.sessions.lock()
             .map_err(|e| format!("无法获取会话锁: {}", e))?;

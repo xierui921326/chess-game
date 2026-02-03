@@ -10,6 +10,7 @@ pub mod junqi_engine;
 // mod xiangqi_engine_property_tests;
 
 // 重新导出
-pub use game_engine_trait::{GameEngine, GameError, GameResult};
+pub use game_engine_trait::{GameEngine, GameError};
+// pub use game_engine_trait::GameResult; // 未使用，已注释
 pub use xiangqi_engine::XiangqiEngine;
 pub use junqi_engine::JunqiEngine;

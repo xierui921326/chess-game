@@ -4,9 +4,11 @@
 pub mod ai_engine;
 pub mod difficulty;
 
-#[cfg(test)]
-mod ai_engine_tests;
+// 测试已移动到 tests/ 目录
+// #[cfg(test)]
+// mod ai_engine_tests;
 
 // 重新导出
-pub use ai_engine::{AIEngine, Move as AIMove};
+pub use ai_engine::AIEngine;
+// pub use ai_engine::Move as AIMove; // 未使用，已注释
 pub use difficulty::Difficulty;

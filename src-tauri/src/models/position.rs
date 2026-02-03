@@ -18,6 +18,7 @@ impl Position {
     }
 
     /// 检查位置是否在军棋棋盘范围内
+    #[allow(dead_code)]
     pub fn is_valid_junqi(&self) -> bool {
         self.row < 12 && self.col < 5
     }

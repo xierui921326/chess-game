@@ -24,6 +24,7 @@ impl AIEngine {
     }
 
     /// 获取搜索深度
+    #[allow(dead_code)]
     pub fn get_search_depth(&self) -> u8 {
         self.search_depth
     }

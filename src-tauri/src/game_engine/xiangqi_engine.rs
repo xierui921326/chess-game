@@ -248,7 +248,7 @@ impl XiangqiEngine {
         let in_palace_cols = position.col >= 3 && position.col <= 5;
         match player {
             Player::Red => position.row >= 7 && position.row <= 9 && in_palace_cols,
-            Player::Black => position.row >= 0 && position.row <= 2 && in_palace_cols,
+            Player::Black => position.row <= 2 && in_palace_cols, // row 是 u8，总是 >= 0
         }
     }
 

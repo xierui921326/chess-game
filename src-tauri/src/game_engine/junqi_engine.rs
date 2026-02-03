@@ -561,6 +561,7 @@ impl JunqiEngine {
     }
 
     /// 检查工兵是否可以在铁路线上移动到目标位置
+    #[allow(dead_code)]
     pub fn can_move_on_railway(&self, from: Position, to: Position) -> bool {
         // 检查起始位置是否有工兵
         let piece = match self.board_state.pieces.get(&from) {

@@ -1,7 +1,7 @@
 // Tauri 命令模块
 // 包含所有前端可调用的 Rust 命令
 
-use crate::models::*;
+use crate::models::{BoardState, GameStatus, MoveResult, Position};
 use crate::game_session::{GAME_SESSION_MANAGER, GameType};
 use crate::game_engine::{GameEngine, GameError};
 use crate::ai::{AIEngine, Difficulty};
@@ -106,29 +106,41 @@ pub fn get_legal_moves(game_id: String, position: Position) -> Result<Vec<Positi
 /// - `to`: 目标位置
 /// 
 /// # 返回
-/// - 成功：返回更新后的棋盘状态
+/// - 成功：返回 MoveResult（含新棋盘状态与游戏状态）
 /// - 失败：返回错误消息
 #[tauri::command]
-pub fn make_player_move(game_id: String, from: Position, to: Position) -> Result<BoardState, String> {
+pub fn make_player_move(game_id: String, from: Position, to: Position) -> Result<MoveResult, String> {
     GAME_SESSION_MANAGER.with_session_mut(&game_id, |session| {
         match session {
             crate::game_session::GameSession::Xiangqi(engine) => {
                 let board_state = engine.get_board_state().clone();
+                let captured = board_state.pieces.get(&to).cloned();
                 engine.make_move(from, to)
                     .map_err(|e| {
                         log_error(&e, Some(&board_state));
                         e.user_message()
                     })?;
-                Ok(engine.get_board_state().clone())
+                Ok(MoveResult::new(
+                    true,
+                    engine.get_board_state().clone(),
+                    engine.get_game_status(),
+                    captured,
+                ))
             }
             crate::game_session::GameSession::Junqi(engine) => {
                 let board_state = engine.get_board_state().clone();
+                let captured = board_state.pieces.get(&to).cloned();
                 engine.make_move(from, to)
                     .map_err(|e| {
                         log_error(&e, Some(&board_state));
                         e.user_message()
                     })?;
-                Ok(engine.get_board_state().clone())
+                Ok(MoveResult::new(
+                    true,
+                    engine.get_board_state().clone(),
+                    engine.get_game_status(),
+                    captured,
+                ))
             }
         }
     }).map_err(|e| {
@@ -144,10 +156,10 @@ pub fn make_player_move(game_id: String, from: Position, to: Position) -> Result
 /// - `game_id`: 游戏 ID
 /// 
 /// # 返回
-/// - 成功：返回 AI 的走法和更新后的棋盘状态
+/// - 成功：返回 MoveResult（含新棋盘状态与游戏状态）
 /// - 失败：返回错误消息
 #[tauri::command]
-pub fn make_ai_move(game_id: String) -> Result<(Position, Position, BoardState), String> {
+pub fn make_ai_move(game_id: String) -> Result<MoveResult, String> {
     GAME_SESSION_MANAGER.with_session_mut(&game_id, |session| {
         match session {
             crate::game_session::GameSession::Xiangqi(engine) => {
@@ -166,13 +178,19 @@ pub fn make_ai_move(game_id: String) -> Result<(Position, Position, BoardState),
                 
                 // 执行走法
                 let board_state = engine.get_board_state().clone();
+                let captured = board_state.pieces.get(&best_move.to).cloned();
                 engine.make_move(best_move.from, best_move.to)
                     .map_err(|e| {
                         log_error(&e, Some(&board_state));
                         e.user_message()
                     })?;
                 
-                Ok((best_move.from, best_move.to, engine.get_board_state().clone()))
+                Ok(MoveResult::new(
+                    true,
+                    engine.get_board_state().clone(),
+                    engine.get_game_status(),
+                    captured,
+                ))
             }
             crate::game_session::GameSession::Junqi(engine) => {
                 // 创建 AI 引擎（中等难度）
@@ -190,13 +208,19 @@ pub fn make_ai_move(game_id: String) -> Result<(Position, Position, BoardState),
                 
                 // 执行走法
                 let board_state = engine.get_board_state().clone();
+                let captured = board_state.pieces.get(&best_move.to).cloned();
                 engine.make_move(best_move.from, best_move.to)
                     .map_err(|e| {
                         log_error(&e, Some(&board_state));
                         e.user_message()
                     })?;
                 
-                Ok((best_move.from, best_move.to, engine.get_board_state().clone()))
+                Ok(MoveResult::new(
+                    true,
+                    engine.get_board_state().clone(),
+                    engine.get_game_status(),
+                    captured,
+                ))
             }
         }
     }).map_err(|e| {
@@ -294,17 +318,18 @@ pub fn restart_game(game_id: String) -> Result<GameStateResponse, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::models::Player;
 
     #[test]
     fn test_start_new_xiangqi_game() {
         let result = start_new_game("xiangqi".to_string());
         assert!(result.is_ok());
         
-        let game_id = result.unwrap();
-        assert!(!game_id.is_empty());
+        let response = result.unwrap();
+        assert!(!response.game_id.is_empty());
         
         // 验证游戏会话已创建
-        let session_result = GAME_SESSION_MANAGER.with_session(&game_id, |session| {
+        let session_result = GAME_SESSION_MANAGER.with_session(&response.game_id, |session| {
             assert_eq!(session.game_type(), GameType::Xiangqi);
             Ok(())
         });
@@ -316,11 +341,11 @@ mod tests {
         let result = start_new_game("junqi".to_string());
         assert!(result.is_ok());
         
-        let game_id = result.unwrap();
-        assert!(!game_id.is_empty());
+        let response = result.unwrap();
+        assert!(!response.game_id.is_empty());
         
         // 验证游戏会话已创建
-        let session_result = GAME_SESSION_MANAGER.with_session(&game_id, |session| {
+        let session_result = GAME_SESSION_MANAGER.with_session(&response.game_id, |session| {
             assert_eq!(session.game_type(), GameType::Junqi);
             Ok(())
         });
@@ -357,9 +382,12 @@ mod tests {
     #[test]
     fn test_multiple_game_sessions() {
         // 测试可以创建多个游戏会话
-        let game_id1 = start_new_game("xiangqi".to_string()).unwrap();
-        let game_id2 = start_new_game("junqi".to_string()).unwrap();
-        let game_id3 = start_new_game("xiangqi".to_string()).unwrap();
+        let r1 = start_new_game("xiangqi".to_string()).unwrap();
+        let r2 = start_new_game("junqi".to_string()).unwrap();
+        let r3 = start_new_game("xiangqi".to_string()).unwrap();
+        let game_id1 = &r1.game_id;
+        let game_id2 = &r2.game_id;
+        let game_id3 = &r3.game_id;
         
         // 验证所有游戏 ID 都不同
         assert_ne!(game_id1, game_id2);
@@ -367,15 +395,15 @@ mod tests {
         assert_ne!(game_id2, game_id3);
         
         // 验证所有会话都存在
-        assert!(GAME_SESSION_MANAGER.with_session(&game_id1, |_| Ok(())).is_ok());
-        assert!(GAME_SESSION_MANAGER.with_session(&game_id2, |_| Ok(())).is_ok());
-        assert!(GAME_SESSION_MANAGER.with_session(&game_id3, |_| Ok(())).is_ok());
+        assert!(GAME_SESSION_MANAGER.with_session(game_id1, |_| Ok(())).is_ok());
+        assert!(GAME_SESSION_MANAGER.with_session(game_id2, |_| Ok(())).is_ok());
+        assert!(GAME_SESSION_MANAGER.with_session(game_id3, |_| Ok(())).is_ok());
     }
 
     #[test]
     fn test_get_legal_moves_xiangqi() {
         // 创建象棋游戏
-        let game_id = start_new_game("xiangqi".to_string()).unwrap();
+        let game_id = start_new_game("xiangqi".to_string()).unwrap().game_id;
         
         // 获取红方马的合法走法（位置 (9, 1)）
         let result = get_legal_moves(game_id.clone(), Position { row: 9, col: 1 });
@@ -396,7 +424,7 @@ mod tests {
     #[test]
     fn test_make_player_move_xiangqi() {
         // 创建象棋游戏
-        let game_id = start_new_game("xiangqi".to_string()).unwrap();
+        let game_id = start_new_game("xiangqi".to_string()).unwrap().game_id;
         
         // 移动红方马：(9, 1) -> (7, 2)
         let result = make_player_move(
@@ -406,7 +434,9 @@ mod tests {
         );
         
         assert!(result.is_ok());
-        let board_state = result.unwrap();
+        let move_result = result.unwrap();
+        assert!(move_result.success);
+        let board_state = &move_result.new_board_state;
         
         // 验证马已经移动到新位置
         assert!(board_state.pieces.contains_key(&Position { row: 7, col: 2 }));
@@ -419,7 +449,7 @@ mod tests {
     #[test]
     fn test_make_player_move_illegal() {
         // 创建象棋游戏
-        let game_id = start_new_game("xiangqi".to_string()).unwrap();
+        let game_id = start_new_game("xiangqi".to_string()).unwrap().game_id;
         
         // 尝试非法移动：将马移动到非法位置
         let result = make_player_move(
@@ -435,7 +465,7 @@ mod tests {
     #[test]
     fn test_undo_move_xiangqi() {
         // 创建象棋游戏
-        let game_id = start_new_game("xiangqi".to_string()).unwrap();
+        let game_id = start_new_game("xiangqi".to_string()).unwrap().game_id;
         
         // 执行一个走法
         let _ = make_player_move(
@@ -448,7 +478,8 @@ mod tests {
         let result = undo_move(game_id.clone());
         assert!(result.is_ok());
         
-        let board_state = result.unwrap();
+        let response = result.unwrap();
+        let board_state = &response.board_state;
         
         // 验证马回到原位置
         assert!(board_state.pieces.contains_key(&Position { row: 9, col: 1 }));
@@ -461,7 +492,7 @@ mod tests {
     #[test]
     fn test_undo_move_no_history() {
         // 创建象棋游戏
-        let game_id = start_new_game("xiangqi".to_string()).unwrap();
+        let game_id = start_new_game("xiangqi".to_string()).unwrap().game_id;
         
         // 尝试在没有历史记录时悔棋
         let result = undo_move(game_id.clone());
@@ -472,7 +503,7 @@ mod tests {
     #[test]
     fn test_restart_game_xiangqi() {
         // 创建象棋游戏
-        let game_id = start_new_game("xiangqi".to_string()).unwrap();
+        let game_id = start_new_game("xiangqi".to_string()).unwrap().game_id;
         
         // 执行一些走法
         let _ = make_player_move(
@@ -485,7 +516,8 @@ mod tests {
         let result = restart_game(game_id.clone());
         assert!(result.is_ok());
         
-        let board_state = result.unwrap();
+        let response = result.unwrap();
+        let board_state = &response.board_state;
         
         // 验证棋盘恢复到初始状态
         assert!(board_state.pieces.contains_key(&Position { row: 9, col: 1 }));
@@ -501,7 +533,7 @@ mod tests {
     #[test]
     fn test_make_ai_move_xiangqi() {
         // 创建象棋游戏
-        let game_id = start_new_game("xiangqi".to_string()).unwrap();
+        let game_id = start_new_game("xiangqi".to_string()).unwrap().game_id;
         
         // 先让玩家走一步（红方）
         let _ = make_player_move(
@@ -514,10 +546,9 @@ mod tests {
         let result = make_ai_move(game_id.clone());
         assert!(result.is_ok());
         
-        let (from, to, board_state) = result.unwrap();
-        
-        // 验证 AI 返回了有效的走法
-        assert_ne!(from, to);
+        let move_result = result.unwrap();
+        assert!(move_result.success);
+        let board_state = &move_result.new_board_state;
         
         // 验证轮到红方
         assert_eq!(board_state.current_player, Player::Red);
@@ -529,7 +560,7 @@ mod tests {
     #[test]
     fn test_get_legal_moves_junqi() {
         // 创建军棋游戏
-        let game_id = start_new_game("junqi".to_string()).unwrap();
+        let game_id = start_new_game("junqi".to_string()).unwrap().game_id;
         
         // 获取红方某个棋子的合法走法（位置 (7, 0) 是红方连长）
         let result = get_legal_moves(game_id.clone(), Position { row: 7, col: 0 });
@@ -543,7 +574,7 @@ mod tests {
     #[test]
     fn test_make_player_move_junqi() {
         // 创建军棋游戏
-        let game_id = start_new_game("junqi".to_string()).unwrap();
+        let game_id = start_new_game("junqi".to_string()).unwrap().game_id;
         
         // 获取合法走法（位置 (7, 0) 是红方连长）
         let legal_moves = get_legal_moves(game_id.clone(), Position { row: 7, col: 0 }).unwrap();
@@ -557,7 +588,8 @@ mod tests {
             );
             
             assert!(result.is_ok());
-            let board_state = result.unwrap();
+            let move_result = result.unwrap();
+            let board_state = &move_result.new_board_state;
             
             // 验证轮到黑方
             assert_eq!(board_state.current_player, Player::Black);
@@ -567,7 +599,7 @@ mod tests {
     #[test]
     fn test_restart_game_junqi() {
         // 创建军棋游戏
-        let game_id = start_new_game("junqi".to_string()).unwrap();
+        let game_id = start_new_game("junqi".to_string()).unwrap().game_id;
         
         // 获取初始棋子数量
         let initial_result = GAME_SESSION_MANAGER.with_session(&game_id, |session| {
@@ -584,7 +616,8 @@ mod tests {
         let result = restart_game(game_id.clone());
         assert!(result.is_ok());
         
-        let board_state = result.unwrap();
+        let response = result.unwrap();
+        let board_state = &response.board_state;
         
         // 验证棋子数量相同
         assert_eq!(board_state.pieces.len(), initial_count);

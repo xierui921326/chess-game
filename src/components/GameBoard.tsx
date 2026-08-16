@@ -257,6 +257,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameType, onBackToMenu }) => {
         {error && <p className="error-message">{error}</p>}
       </div>
 
+      <div className="board-area">
       <BoardRenderer
         boardState={gameState.board_state}
         selectedPiece={selectedPiece}
@@ -264,6 +265,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameType, onBackToMenu }) => {
         onCellClick={handleCellClick}
         gameType={gameType}
       />
+      </div>
 
       <div className="game-controls">
         <button onClick={handleUndo} disabled={!canUndo || !isPlayerTurn || gameOver}>

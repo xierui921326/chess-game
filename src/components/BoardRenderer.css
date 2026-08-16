@@ -2,7 +2,12 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 1rem;
+  padding: 0;
+}
+
+.board-canvas-wrapper {
+  flex-shrink: 0;
+  line-height: 0;
 }
 
 .board-canvas {
@@ -11,6 +16,7 @@
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   cursor: pointer;
   background: #f0d9b5;
+  display: block;
 }
 
 .board-canvas:hover {

@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import type { BoardState, Position } from '../types';
 import './BoardRenderer.css';
 
@@ -20,10 +20,10 @@ const XIANGQI_COLS = 9;
 const JUNQI_ROWS = 12;
 const JUNQI_COLS = 5;
 
-// 绘制参数 - 调整为更小的尺寸以适应一屏
-const CELL_SIZE = 45; // 从 60 减小到 45
-const PADDING = 30;   // 从 40 减小到 30
-const PIECE_RADIUS = 18; // 从 25 减小到 18
+// 绘制参数 - 缩小以适应一屏内完整展示
+const CELL_SIZE = 36;
+const PADDING = 20;
+const PIECE_RADIUS = 14;
 
 const BoardRenderer: React.FC<BoardRendererProps> = ({
   boardState,
@@ -33,12 +33,32 @@ const BoardRenderer: React.FC<BoardRendererProps> = ({
   gameType,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
 
   const rows = gameType === 'xiangqi' ? XIANGQI_ROWS : JUNQI_ROWS;
   const cols = gameType === 'xiangqi' ? XIANGQI_COLS : JUNQI_COLS;
 
   const canvasWidth = cols * CELL_SIZE + PADDING * 2;
   const canvasHeight = rows * CELL_SIZE + PADDING * 2;
+
+  // 根据容器尺寸计算缩放比例，使棋盘完整显示且居中
+  useEffect(() => {
+    const wrapper = wrapperRef.current;
+    if (!wrapper) return;
+
+    const updateScale = () => {
+      const { clientWidth: W, clientHeight: H } = wrapper;
+      if (W <= 0 || H <= 0) return;
+      const s = Math.min(W / canvasWidth, H / canvasHeight, 1);
+      setScale(s);
+    };
+
+    updateScale();
+    const ro = new ResizeObserver(updateScale);
+    ro.observe(wrapper);
+    return () => ro.disconnect();
+  }, [canvasWidth, canvasHeight]);
 
   // 绘制棋盘
   useEffect(() => {
@@ -153,23 +173,21 @@ const BoardRenderer: React.FC<BoardRendererProps> = ({
     ctx.fillText('汉界', PADDING + 6 * CELL_SIZE, riverY);
   };
 
-  // 绘制军棋特殊标记
+  // 绘制军棋特殊标记（与后端 RED_CAMP_POSITIONS / BLACK_CAMP_POSITIONS 一致）
   const drawJunqiSpecialMarks = (ctx: CanvasRenderingContext2D) => {
     ctx.lineWidth = 2;
-
-    // 绘制铁路线（粗线）
     ctx.strokeStyle = '#666';
-    
-    // 横向铁路线
+
+    // 横向铁路线（第 1, 5, 6, 10 行）
     const railwayRows = [1, 5, 6, 10];
     railwayRows.forEach(row => {
       ctx.beginPath();
       ctx.moveTo(PADDING, PADDING + row * CELL_SIZE);
-      ctx.lineTo(PADDING + 4 * CELL_SIZE, PADDING + row * CELL_SIZE);
+      ctx.lineTo(PADDING + (JUNQI_COLS - 1) * CELL_SIZE, PADDING + row * CELL_SIZE);
       ctx.stroke();
     });
 
-    // 竖向铁路线（左右两侧）
+    // 竖向铁路线（左右两列 0 和 4）
     [0, 4].forEach(col => {
       ctx.beginPath();
       ctx.moveTo(PADDING + col * CELL_SIZE, PADDING + CELL_SIZE);
@@ -177,48 +195,61 @@ const BoardRenderer: React.FC<BoardRendererProps> = ({
       ctx.stroke();
     });
 
-    // 绘制营地（用小圆圈标记）
-    ctx.fillStyle = 'rgba(100, 100, 100, 0.2)';
-    ctx.strokeStyle = '#666';
+    // 营地（与后端一致：黑方 (0,0),(0,2),(0,4),(1,1),(1,3)；红方 (10,1),(10,3),(11,0),(11,2),(11,4)）
+    ctx.fillStyle = 'rgba(100, 100, 100, 0.25)';
+    ctx.strokeStyle = '#555';
     ctx.lineWidth = 1;
-    
-    // 黑方营地（上方）
-    const blackCamps = [
-      { row: 2, col: 1 }, { row: 2, col: 3 },
-      { row: 3, col: 2 }
+
+    const blackCamps: { row: number; col: number }[] = [
+      { row: 0, col: 0 }, { row: 0, col: 2 }, { row: 0, col: 4 },
+      { row: 1, col: 1 }, { row: 1, col: 3 },
     ];
-    
-    // 红方营地（下方）
-    const redCamps = [
-      { row: 8, col: 2 },
-      { row: 9, col: 1 }, { row: 9, col: 3 }
+    const redCamps: { row: number; col: number }[] = [
+      { row: 10, col: 1 }, { row: 10, col: 3 },
+      { row: 11, col: 0 }, { row: 11, col: 2 }, { row: 11, col: 4 },
     ];
 
     [...blackCamps, ...redCamps].forEach(camp => {
       const x = PADDING + camp.col * CELL_SIZE;
       const y = PADDING + camp.row * CELL_SIZE;
       ctx.beginPath();
-      ctx.arc(x, y, 8, 0, 2 * Math.PI);
+      ctx.arc(x, y, 6, 0, 2 * Math.PI);
       ctx.fill();
       ctx.stroke();
     });
 
-    // 绘制行营连线
+    // 行营三角形连线（黑方：第0-1行五个营地；红方：第10-11行五个营地）
     ctx.strokeStyle = '#888';
     ctx.lineWidth = 1;
-    
-    // 黑方行营
+    // 黑方行营三角
     ctx.beginPath();
-    ctx.moveTo(PADDING + 1 * CELL_SIZE, PADDING + 2 * CELL_SIZE);
-    ctx.lineTo(PADDING + 2 * CELL_SIZE, PADDING + 3 * CELL_SIZE);
-    ctx.lineTo(PADDING + 3 * CELL_SIZE, PADDING + 2 * CELL_SIZE);
+    ctx.moveTo(PADDING + 0 * CELL_SIZE, PADDING + 1 * CELL_SIZE);
+    ctx.lineTo(PADDING + 1 * CELL_SIZE, PADDING + 0 * CELL_SIZE);
+    ctx.lineTo(PADDING + 2 * CELL_SIZE, PADDING + 1 * CELL_SIZE);
+    ctx.lineTo(PADDING + 1 * CELL_SIZE, PADDING + 1 * CELL_SIZE);
+    ctx.closePath();
     ctx.stroke();
-
-    // 红方行营
     ctx.beginPath();
-    ctx.moveTo(PADDING + 1 * CELL_SIZE, PADDING + 9 * CELL_SIZE);
-    ctx.lineTo(PADDING + 2 * CELL_SIZE, PADDING + 8 * CELL_SIZE);
-    ctx.lineTo(PADDING + 3 * CELL_SIZE, PADDING + 9 * CELL_SIZE);
+    ctx.moveTo(PADDING + 2 * CELL_SIZE, PADDING + 0 * CELL_SIZE);
+    ctx.lineTo(PADDING + 3 * CELL_SIZE, PADDING + 1 * CELL_SIZE);
+    ctx.lineTo(PADDING + 4 * CELL_SIZE, PADDING + 0 * CELL_SIZE);
+    ctx.lineTo(PADDING + 3 * CELL_SIZE, PADDING + 1 * CELL_SIZE);
+    ctx.closePath();
+    ctx.stroke();
+    // 红方行营三角
+    ctx.beginPath();
+    ctx.moveTo(PADDING + 0 * CELL_SIZE, PADDING + 10 * CELL_SIZE);
+    ctx.lineTo(PADDING + 1 * CELL_SIZE, PADDING + 11 * CELL_SIZE);
+    ctx.lineTo(PADDING + 2 * CELL_SIZE, PADDING + 10 * CELL_SIZE);
+    ctx.lineTo(PADDING + 1 * CELL_SIZE, PADDING + 10 * CELL_SIZE);
+    ctx.closePath();
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(PADDING + 2 * CELL_SIZE, PADDING + 11 * CELL_SIZE);
+    ctx.lineTo(PADDING + 3 * CELL_SIZE, PADDING + 10 * CELL_SIZE);
+    ctx.lineTo(PADDING + 4 * CELL_SIZE, PADDING + 11 * CELL_SIZE);
+    ctx.lineTo(PADDING + 3 * CELL_SIZE, PADDING + 10 * CELL_SIZE);
+    ctx.closePath();
     ctx.stroke();
   };
 
@@ -266,7 +297,7 @@ const BoardRenderer: React.FC<BoardRendererProps> = ({
 
       // 绘制棋子文字
       ctx.fillStyle = '#fff';
-      ctx.font = 'bold 14px SimSun, serif'; // 调整字体大小
+      ctx.font = 'bold 12px SimSun, serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       
@@ -313,34 +344,38 @@ const BoardRenderer: React.FC<BoardRendererProps> = ({
     return '?';
   };
 
-  // 处理点击事件
+  // 处理点击事件（考虑缩放后坐标）
   const handleCanvasClick = (event: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     const rect = canvas.getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    const y = event.clientY - rect.top;
+    // 点击位置相对于显示区域的坐标，需换算回画布坐标
+    const x = (event.clientX - rect.left) / scale;
+    const y = (event.clientY - rect.top) / scale;
 
-    // 计算点击的格子位置
     const col = Math.round((x - PADDING) / CELL_SIZE);
     const row = Math.round((y - PADDING) / CELL_SIZE);
 
-    // 检查是否在有效范围内
     if (row >= 0 && row < rows && col >= 0 && col < cols) {
       onCellClick({ row, col });
     }
   };
 
   return (
-    <div className="board-renderer">
-      <canvas
-        ref={canvasRef}
-        width={canvasWidth}
-        height={canvasHeight}
-        onClick={handleCanvasClick}
-        className="board-canvas"
-      />
+    <div className="board-renderer" ref={wrapperRef}>
+      <div
+        className="board-canvas-wrapper"
+        style={{ transform: scale < 1 ? `scale(${scale})` : undefined }}
+      >
+        <canvas
+          ref={canvasRef}
+          width={canvasWidth}
+          height={canvasHeight}
+          onClick={handleCanvasClick}
+          className="board-canvas"
+        />
+      </div>
     </div>
   );
 };

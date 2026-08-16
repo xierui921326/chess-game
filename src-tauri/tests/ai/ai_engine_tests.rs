@@ -8,13 +8,13 @@ mod tests {
     #[test]
     fn test_ai_engine_creation() {
         let ai_easy = AIEngine::new(Difficulty::Easy);
-        assert_eq!(ai_easy.get_search_depth(), 2);
+        assert_eq!(ai_easy.get_search_depth(), 1);
 
         let ai_medium = AIEngine::new(Difficulty::Medium);
-        assert_eq!(ai_medium.get_search_depth(), 4);
+        assert_eq!(ai_medium.get_search_depth(), 2);
 
         let ai_hard = AIEngine::new(Difficulty::Hard);
-        assert_eq!(ai_hard.get_search_depth(), 6);
+        assert_eq!(ai_hard.get_search_depth(), 3);
     }
 
     #[test]

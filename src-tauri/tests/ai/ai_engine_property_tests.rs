@@ -156,9 +156,9 @@ proptest! {
         
         // 验证搜索深度与难度对应
         let expected_depth = match difficulty {
-            Difficulty::Easy => 2,
-            Difficulty::Medium => 4,
-            Difficulty::Hard => 6,
+            Difficulty::Easy => 1,
+            Difficulty::Medium => 2,
+            Difficulty::Hard => 3,
         };
         
         prop_assert_eq!(

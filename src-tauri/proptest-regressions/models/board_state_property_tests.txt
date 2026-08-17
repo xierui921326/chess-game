@@ -1,0 +1,8 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 0f9c0df8133db2a0e36cf0cba45379f3f85b38a3ae539fe7dd474f288beeb57d # shrinks to board_state = BoardState { pieces: {Position { row: 0, col: 0 }: Piece { piece_type: Xiangqi(General), player: Red }}, current_player: Red, move_history: [] }
+cc 9e70d58fcc88048b6f5e52423b134186f8b06702ad6414f5727e3bc18b9c3622 # shrinks to board_state = BoardState { pieces: {Position { row: 0, col: 0 }: Piece { piece_type: Xiangqi(General), player: Red }}, current_player: Red, move_history: [] }

@@ -1,0 +1,261 @@
+.game-board-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100vh;
+  max-height: 100vh;
+  padding: 0.5rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.game-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  margin-bottom: 0.25rem;
+  flex-shrink: 0;
+  padding: 0 0.5rem;
+}
+
+.game-header h1 {
+  font-size: 1.25rem;
+  color: white;
+  margin: 0;
+}
+
+.back-button {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.9rem;
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 2px solid white;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.back-button:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.game-status {
+  background: rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(6px);
+  padding: 0.35rem 1rem;
+  border-radius: 999px;
+  margin-bottom: 0.25rem;
+  min-width: 200px;
+  text-align: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  flex-shrink: 0;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.game-status p {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: bold;
+  color: rgba(255, 255, 255, 0.98);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.game-status .game-over {
+  color: #fecaca;
+  font-size: 1.1rem;
+  text-shadow: 0 0 2px rgba(0, 0, 0, 0.3);
+}
+
+.game-status .error-message {
+  color: #fecaca;
+  font-size: 0.85rem;
+  margin-top: 0.25rem;
+}
+
+.board-area {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  width: 100%;
+  padding: 0 0.5rem;
+}
+
+.board-area .board-renderer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+
+.board-area .board-renderer .board-canvas-wrapper {
+  max-width: 100%;
+  max-height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform-origin: center center;
+}
+
+.board-area .board-canvas {
+  max-width: 100%;
+  max-height: 100%;
+  display: block;
+}
+
+.game-controls {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+  flex-shrink: 0;
+  width: 100%;
+  justify-content: center;
+  padding: 0 0.5rem;
+}
+
+.game-controls button {
+  padding: 0.5rem 1.2rem;
+  font-size: 0.9rem;
+  background: white;
+  color: #667eea;
+  border: 2px solid #667eea;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: bold;
+}
+
+.game-controls button:hover:not(:disabled) {
+  background: #667eea;
+  color: white;
+}
+
+.game-controls button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.loading,
+.error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 50vh;
+  color: white;
+  font-size: 1.5rem;
+}
+
+.error button {
+  margin-top: 1rem;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  background: white;
+  color: #667eea;
+  border: none;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.error button:hover {
+  background: #f0f0f0;
+}
+
+.game-over-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.game-over-dialog {
+  background: white;
+  padding: 2rem;
+  border-radius: 1rem;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+  text-align: center;
+  max-width: 400px;
+}
+
+.game-over-dialog h2 {
+  font-size: 2rem;
+  color: #2d3748;
+  margin-bottom: 1rem;
+}
+
+.game-over-dialog p {
+  font-size: 1.3rem;
+  color: #e53e3e;
+  font-weight: bold;
+  margin-bottom: 2rem;
+}
+
+.game-over-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+
+.game-over-buttons button {
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.game-over-buttons button:hover {
+  background: #5a67d8;
+}
+
+.game-over-buttons button:last-child {
+  background: #718096;
+}
+
+.game-over-buttons button:last-child:hover {
+  background: #4a5568;
+}
+
+@media (max-width: 768px) {
+  .game-board-container {
+    padding: 0.5rem;
+  }
+
+  .game-header {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .game-header h1 {
+    font-size: 1.2rem;
+  }
+
+  .game-controls {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .game-controls button {
+    width: 100%;
+  }
+}

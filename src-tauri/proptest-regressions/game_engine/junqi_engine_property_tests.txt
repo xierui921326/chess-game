@@ -1,0 +1,8 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 490c9b24deb5ac8e420303716c74a48a06c908e6c25aed8b882fcd6253f74b7d # shrinks to attacker_type = Bomb
+cc 80ca345eb0ec503db681ee6758c265993921728c8cd3f9757718c90a4c5031fa # shrinks to player = Red, start_pos = Position { row: 5, col: 1 }, piece_type = Engineer

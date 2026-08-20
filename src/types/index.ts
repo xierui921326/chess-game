@@ -62,6 +62,39 @@ export type GameStatus =
   | { type: 'Stalemate' }
   | { type: 'Victory'; winner: Player };
 
+/** 兼容 Rust 默认外部标签（`"Ongoing"`）与 `{ type: "Ongoing" }` */
+export function parseGameStatus(raw: unknown): GameStatus {
+  if (raw === 'Ongoing' || raw === 'Stalemate') {
+    return { type: raw };
+  }
+
+  if (!raw || typeof raw !== 'object') {
+    return { type: 'Ongoing' };
+  }
+
+  const obj = raw as Record<string, unknown>;
+  if (typeof obj.type === 'string') {
+    return raw as GameStatus;
+  }
+  if ('Check' in obj && obj.Check && typeof obj.Check === 'object') {
+    return { type: 'Check', player: (obj.Check as { player: Player }).player };
+  }
+  if ('Checkmate' in obj && obj.Checkmate && typeof obj.Checkmate === 'object') {
+    return { type: 'Checkmate', winner: (obj.Checkmate as { winner: Player }).winner };
+  }
+  if ('Victory' in obj && obj.Victory && typeof obj.Victory === 'object') {
+    return { type: 'Victory', winner: (obj.Victory as { winner: Player }).winner };
+  }
+  if ('Ongoing' in obj) {
+    return { type: 'Ongoing' };
+  }
+  if ('Stalemate' in obj) {
+    return { type: 'Stalemate' };
+  }
+
+  return { type: 'Ongoing' };
+}
+
 export interface MoveResult {
   success: boolean;
   new_board_state: BoardState;
@@ -70,3 +103,23 @@ export interface MoveResult {
 }
 
 export type GameType = 'xiangqi' | 'junqi';
+
+/** AI 难度，与 Rust `Difficulty` 对齐 */
+export type Difficulty = 'Easy' | 'Medium' | 'Hard';
+
+export interface NewGameOptions {
+  gameType: GameType;
+  /** 玩家执子颜色；红方默认先手 */
+  playerSide: Player;
+  difficulty: Difficulty;
+}
+
+export const DIFFICULTY_LABELS: Record<Difficulty, string> = {
+  Easy: '简单',
+  Medium: '普通',
+  Hard: '困难',
+};
+
+export function isGameType(value: string): value is GameType {
+  return value === 'xiangqi' || value === 'junqi';
+}

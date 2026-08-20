@@ -2,12 +2,12 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  height: 100vh;
-  max-height: 100vh;
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
   padding: 0.5rem;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   overflow: hidden;
-  flex-shrink: 0;
 }
 
 .game-header {
@@ -18,12 +18,26 @@
   margin-bottom: 0.25rem;
   flex-shrink: 0;
   padding: 0 0.5rem;
+  gap: 0.75rem;
 }
 
-.game-header h1 {
+.game-header-text h1 {
   font-size: 1.25rem;
   color: white;
   margin: 0;
+}
+
+.game-meta {
+  margin: 0.15rem 0 0;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.header-actions {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .back-button {
@@ -35,6 +49,11 @@
   border-radius: 0.5rem;
   cursor: pointer;
   transition: all 0.3s ease;
+}
+
+.back-button.secondary {
+  background: transparent;
+  border-color: rgba(255, 255, 255, 0.65);
 }
 
 .back-button:hover {
@@ -68,10 +87,16 @@
   text-shadow: 0 0 2px rgba(0, 0, 0, 0.3);
 }
 
-.game-status .error-message {
-  color: #fecaca;
-  font-size: 0.85rem;
-  margin-top: 0.25rem;
+.game-error-banner {
+  flex-shrink: 0;
+  margin-bottom: 0.25rem;
+  padding: 0.4rem 0.9rem;
+  border-radius: 0.65rem;
+  background: rgba(254, 202, 202, 0.92);
+  color: #9b2c2c;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-align: center;
 }
 
 .board-area {
@@ -87,30 +112,8 @@
 }
 
 .board-area .board-renderer {
-  display: flex;
-  align-items: center;
-  justify-content: center;
   width: 100%;
   height: 100%;
-  max-width: 100%;
-  max-height: 100%;
-  min-width: 0;
-  min-height: 0;
-}
-
-.board-area .board-renderer .board-canvas-wrapper {
-  max-width: 100%;
-  max-height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transform-origin: center center;
-}
-
-.board-area .board-canvas {
-  max-width: 100%;
-  max-height: 100%;
-  display: block;
 }
 
 .game-controls {
@@ -158,6 +161,7 @@
 
 .error button {
   margin-top: 1rem;
+  margin-right: 0.5rem;
   padding: 0.75rem 1.5rem;
   font-size: 1rem;
   background: white;
@@ -209,6 +213,7 @@
 
 .game-over-buttons {
   display: flex;
+  flex-wrap: wrap;
   gap: 1rem;
   justify-content: center;
 }
@@ -236,9 +241,72 @@
   background: #4a5568;
 }
 
+.layout-junqi {
+  display: grid;
+  grid-template-columns: minmax(168px, 220px) minmax(0, 1fr);
+  grid-template-rows: auto auto auto minmax(0, 1fr);
+  grid-template-areas:
+    "header board"
+    "status board"
+    "error board"
+    "controls board";
+  column-gap: 0.75rem;
+  align-items: stretch;
+}
+
+.layout-junqi .game-header {
+  grid-area: header;
+  flex-direction: column;
+  align-items: stretch;
+  width: auto;
+  margin-bottom: 0.5rem;
+  padding: 0;
+}
+
+.layout-junqi .header-actions {
+  justify-content: stretch;
+}
+
+.layout-junqi .header-actions .back-button {
+  flex: 1;
+}
+
+.layout-junqi .game-status {
+  grid-area: status;
+  min-width: 0;
+  width: 100%;
+  margin-bottom: 0.5rem;
+}
+
+.layout-junqi .game-error-banner {
+  grid-area: error;
+}
+
+.layout-junqi .game-controls {
+  grid-area: controls;
+  flex-direction: column;
+  width: auto;
+  margin-top: auto;
+  padding: 0;
+}
+
+.layout-junqi .game-controls button {
+  width: 100%;
+}
+
+.layout-junqi .board-area {
+  grid-area: board;
+  padding: 0;
+}
+
 @media (max-width: 768px) {
   .game-board-container {
     padding: 0.5rem;
+  }
+
+  .layout-junqi {
+    display: flex;
+    flex-direction: column;
   }
 
   .game-header {

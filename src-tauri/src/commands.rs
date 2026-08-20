@@ -20,12 +20,16 @@ pub struct GameStateResponse {
 /// 
 /// # 参数
 /// - `game_type`: 游戏类型（"xiangqi"/"象棋" 或 "junqi"/"军棋"）
+/// - `difficulty`: AI 难度（"Easy"/"Medium"/"Hard"，默认 Medium）
 /// 
 /// # 返回
 /// - 成功：返回游戏状态（包含游戏 ID、棋盘状态和游戏状态）
 /// - 失败：返回错误消息
 #[tauri::command]
-pub fn start_new_game(game_type: String) -> Result<GameStateResponse, String> {
+pub fn start_new_game(
+    game_type: String,
+    difficulty: Option<String>,
+) -> Result<GameStateResponse, String> {
     // 解析游戏类型
     let game_type_enum = match game_type.to_lowercase().as_str() {
         "xiangqi" | "象棋" => GameType::Xiangqi,
@@ -39,8 +43,11 @@ pub fn start_new_game(game_type: String) -> Result<GameStateResponse, String> {
         }
     };
 
+    let difficulty_enum = parse_difficulty(difficulty.as_deref())?;
+
     // 创建新的游戏会话
-    let game_id = GAME_SESSION_MANAGER.create_session(game_type_enum)
+    let game_id = GAME_SESSION_MANAGER
+        .create_session(game_type_enum, difficulty_enum)
         .map_err(|e| {
             let error = GameError::IPCError { message: e };
             log_error(&error, None);
@@ -69,6 +76,21 @@ pub fn start_new_game(game_type: String) -> Result<GameStateResponse, String> {
         log_error(&error, None);
         error.user_message()
     })
+}
+
+fn parse_difficulty(raw: Option<&str>) -> Result<Difficulty, String> {
+    match raw.map(|s| s.to_ascii_lowercase()).as_deref() {
+        None | Some("medium") | Some("normal") | Some("普通") => Ok(Difficulty::Medium),
+        Some("easy") | Some("简单") => Ok(Difficulty::Easy),
+        Some("hard") | Some("困难") => Ok(Difficulty::Hard),
+        Some(other) => {
+            let error = GameError::InvalidInput {
+                message: format!("不支持的难度: {}", other),
+            };
+            log_error(&error, None);
+            Err(error.user_message())
+        }
+    }
 }
 
 /// 获取指定位置棋子的合法走法
@@ -160,11 +182,14 @@ pub fn make_player_move(game_id: String, from: Position, to: Position) -> Result
 /// - 失败：返回错误消息
 #[tauri::command]
 pub fn make_ai_move(game_id: String) -> Result<MoveResult, String> {
+    let difficulty = GAME_SESSION_MANAGER
+        .get_difficulty(&game_id)
+        .unwrap_or(Difficulty::Medium);
+
     GAME_SESSION_MANAGER.with_session_mut(&game_id, |session| {
         match session {
             crate::game_session::GameSession::Xiangqi(engine) => {
-                // 创建 AI 引擎（中等难度）
-                let ai = AIEngine::new(Difficulty::Medium);
+                let ai = AIEngine::new(difficulty);
                 
                 // 计算最优走法
                 let best_move = ai.calculate_best_move(engine)
@@ -193,8 +218,7 @@ pub fn make_ai_move(game_id: String) -> Result<MoveResult, String> {
                 ))
             }
             crate::game_session::GameSession::Junqi(engine) => {
-                // 创建 AI 引擎（中等难度）
-                let ai = AIEngine::new(Difficulty::Medium);
+                let ai = AIEngine::new(difficulty);
                 
                 // 计算最优走法
                 let best_move = ai.calculate_best_move(engine)
@@ -322,7 +346,7 @@ mod tests {
 
     #[test]
     fn test_start_new_xiangqi_game() {
-        let result = start_new_game("xiangqi".to_string());
+        let result = start_new_game("xiangqi".to_string(), None);
         assert!(result.is_ok());
         
         let response = result.unwrap();
@@ -338,7 +362,7 @@ mod tests {
 
     #[test]
     fn test_start_new_junqi_game() {
-        let result = start_new_game("junqi".to_string());
+        let result = start_new_game("junqi".to_string(), None);
         assert!(result.is_ok());
         
         let response = result.unwrap();
@@ -355,26 +379,26 @@ mod tests {
     #[test]
     fn test_start_new_game_chinese_name() {
         // 测试中文游戏名称
-        let result1 = start_new_game("象棋".to_string());
+        let result1 = start_new_game("象棋".to_string(), None);
         assert!(result1.is_ok());
         
-        let result2 = start_new_game("军棋".to_string());
+        let result2 = start_new_game("军棋".to_string(), None);
         assert!(result2.is_ok());
     }
 
     #[test]
     fn test_start_new_game_case_insensitive() {
         // 测试大小写不敏感
-        let result1 = start_new_game("XIANGQI".to_string());
+        let result1 = start_new_game("XIANGQI".to_string(), None);
         assert!(result1.is_ok());
         
-        let result2 = start_new_game("Junqi".to_string());
+        let result2 = start_new_game("Junqi".to_string(), None);
         assert!(result2.is_ok());
     }
 
     #[test]
     fn test_start_new_game_invalid_type() {
-        let result = start_new_game("invalid_game".to_string());
+        let result = start_new_game("invalid_game".to_string(), None);
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("不支持的游戏类型"));
     }
@@ -382,9 +406,9 @@ mod tests {
     #[test]
     fn test_multiple_game_sessions() {
         // 测试可以创建多个游戏会话
-        let r1 = start_new_game("xiangqi".to_string()).unwrap();
-        let r2 = start_new_game("junqi".to_string()).unwrap();
-        let r3 = start_new_game("xiangqi".to_string()).unwrap();
+        let r1 = start_new_game("xiangqi".to_string(), None).unwrap();
+        let r2 = start_new_game("junqi".to_string(), None).unwrap();
+        let r3 = start_new_game("xiangqi".to_string(), None).unwrap();
         let game_id1 = &r1.game_id;
         let game_id2 = &r2.game_id;
         let game_id3 = &r3.game_id;
@@ -403,7 +427,7 @@ mod tests {
     #[test]
     fn test_get_legal_moves_xiangqi() {
         // 创建象棋游戏
-        let game_id = start_new_game("xiangqi".to_string()).unwrap().game_id;
+        let game_id = start_new_game("xiangqi".to_string(), None).unwrap().game_id;
         
         // 获取红方马的合法走法（位置 (9, 1)）
         let result = get_legal_moves(game_id.clone(), Position { row: 9, col: 1 });
@@ -424,7 +448,7 @@ mod tests {
     #[test]
     fn test_make_player_move_xiangqi() {
         // 创建象棋游戏
-        let game_id = start_new_game("xiangqi".to_string()).unwrap().game_id;
+        let game_id = start_new_game("xiangqi".to_string(), None).unwrap().game_id;
         
         // 移动红方马：(9, 1) -> (7, 2)
         let result = make_player_move(
@@ -449,7 +473,7 @@ mod tests {
     #[test]
     fn test_make_player_move_illegal() {
         // 创建象棋游戏
-        let game_id = start_new_game("xiangqi".to_string()).unwrap().game_id;
+        let game_id = start_new_game("xiangqi".to_string(), None).unwrap().game_id;
         
         // 尝试非法移动：将马移动到非法位置
         let result = make_player_move(
@@ -465,7 +489,7 @@ mod tests {
     #[test]
     fn test_undo_move_xiangqi() {
         // 创建象棋游戏
-        let game_id = start_new_game("xiangqi".to_string()).unwrap().game_id;
+        let game_id = start_new_game("xiangqi".to_string(), None).unwrap().game_id;
         
         // 执行一个走法
         let _ = make_player_move(
@@ -492,7 +516,7 @@ mod tests {
     #[test]
     fn test_undo_move_no_history() {
         // 创建象棋游戏
-        let game_id = start_new_game("xiangqi".to_string()).unwrap().game_id;
+        let game_id = start_new_game("xiangqi".to_string(), None).unwrap().game_id;
         
         // 尝试在没有历史记录时悔棋
         let result = undo_move(game_id.clone());
@@ -503,7 +527,7 @@ mod tests {
     #[test]
     fn test_restart_game_xiangqi() {
         // 创建象棋游戏
-        let game_id = start_new_game("xiangqi".to_string()).unwrap().game_id;
+        let game_id = start_new_game("xiangqi".to_string(), None).unwrap().game_id;
         
         // 执行一些走法
         let _ = make_player_move(
@@ -533,7 +557,7 @@ mod tests {
     #[test]
     fn test_make_ai_move_xiangqi() {
         // 创建象棋游戏
-        let game_id = start_new_game("xiangqi".to_string()).unwrap().game_id;
+        let game_id = start_new_game("xiangqi".to_string(), None).unwrap().game_id;
         
         // 先让玩家走一步（红方）
         let _ = make_player_move(
@@ -560,7 +584,7 @@ mod tests {
     #[test]
     fn test_get_legal_moves_junqi() {
         // 创建军棋游戏
-        let game_id = start_new_game("junqi".to_string()).unwrap().game_id;
+        let game_id = start_new_game("junqi".to_string(), None).unwrap().game_id;
         
         // 获取红方某个棋子的合法走法（位置 (7, 0) 是红方连长）
         let result = get_legal_moves(game_id.clone(), Position { row: 7, col: 0 });
@@ -574,7 +598,7 @@ mod tests {
     #[test]
     fn test_make_player_move_junqi() {
         // 创建军棋游戏
-        let game_id = start_new_game("junqi".to_string()).unwrap().game_id;
+        let game_id = start_new_game("junqi".to_string(), None).unwrap().game_id;
         
         // 获取合法走法（位置 (7, 0) 是红方连长）
         let legal_moves = get_legal_moves(game_id.clone(), Position { row: 7, col: 0 }).unwrap();
@@ -599,7 +623,7 @@ mod tests {
     #[test]
     fn test_restart_game_junqi() {
         // 创建军棋游戏
-        let game_id = start_new_game("junqi".to_string()).unwrap().game_id;
+        let game_id = start_new_game("junqi".to_string(), None).unwrap().game_id;
         
         // 获取初始棋子数量
         let initial_result = GAME_SESSION_MANAGER.with_session(&game_id, |session| {

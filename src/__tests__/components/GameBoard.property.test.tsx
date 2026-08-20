@@ -37,13 +37,14 @@ describe('GameBoard 属性测试', () => {
       (invoke as any).mockResolvedValue(mockGameState);
 
       const mockOnBackToMenu = vi.fn();
-      render(<GameBoard gameType="xiangqi" onBackToMenu={mockOnBackToMenu} />);
+      render(<GameBoard gameType="xiangqi" playerSide="Red" difficulty="Medium" onBackToMenu={mockOnBackToMenu} />);
 
       // 等待游戏加载
       await waitFor(
         () => {
           expect(invoke).toHaveBeenCalledWith('start_new_game', {
             gameType: 'xiangqi',
+            difficulty: 'Medium',
           });
         },
         { timeout: 3000 }
@@ -72,7 +73,7 @@ describe('GameBoard 属性测试', () => {
       (invoke as any).mockResolvedValue(mockGameState);
 
       const mockOnBackToMenu = vi.fn();
-      render(<GameBoard gameType="xiangqi" onBackToMenu={mockOnBackToMenu} />);
+      render(<GameBoard gameType="xiangqi" playerSide="Red" difficulty="Medium" onBackToMenu={mockOnBackToMenu} />);
 
       await waitFor(
         () => {
@@ -110,7 +111,7 @@ describe('GameBoard 属性测试', () => {
       (invoke as any).mockResolvedValue(mockGameState);
 
       const mockOnBackToMenu = vi.fn();
-      render(<GameBoard gameType="xiangqi" onBackToMenu={mockOnBackToMenu} />);
+      render(<GameBoard gameType="xiangqi" playerSide="Red" difficulty="Medium" onBackToMenu={mockOnBackToMenu} />);
 
       await waitFor(
         () => {
@@ -146,11 +147,12 @@ describe('GameBoard 属性测试', () => {
       (invoke as any).mockResolvedValueOnce(mockGameState);
 
       const mockOnBackToMenu = vi.fn();
-      render(<GameBoard gameType="xiangqi" onBackToMenu={mockOnBackToMenu} />);
+      render(<GameBoard gameType="xiangqi" playerSide="Red" difficulty="Medium" onBackToMenu={mockOnBackToMenu} />);
 
       await waitFor(() => {
         expect(invoke).toHaveBeenCalledWith('start_new_game', {
           gameType: 'xiangqi',
+          difficulty: 'Medium',
         });
       });
 
@@ -183,11 +185,12 @@ describe('GameBoard 属性测试', () => {
       (invoke as any).mockResolvedValueOnce(mockLegalMoves);
 
       const mockOnBackToMenu = vi.fn();
-      render(<GameBoard gameType="xiangqi" onBackToMenu={mockOnBackToMenu} />);
+      render(<GameBoard gameType="xiangqi" playerSide="Red" difficulty="Medium" onBackToMenu={mockOnBackToMenu} />);
 
       await waitFor(() => {
         expect(invoke).toHaveBeenCalledWith('start_new_game', {
           gameType: 'xiangqi',
+          difficulty: 'Medium',
         });
       });
 

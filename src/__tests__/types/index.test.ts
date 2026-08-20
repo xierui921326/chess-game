@@ -11,6 +11,7 @@ import type {
   GameStatus,
   MoveResult,
 } from '../../types/index';
+import { parseGameStatus } from '../../types/index';
 
 describe('数据类型定义测试', () => {
   describe('Position', () => {
@@ -213,6 +214,18 @@ describe('数据类型定义测试', () => {
       if (status.type === 'Victory') {
         expect(status.winner).toBe('Red');
       }
+    });
+
+    it('parseGameStatus 应兼容 Rust 外部标签字符串', () => {
+      expect(parseGameStatus('Ongoing')).toEqual({ type: 'Ongoing' });
+      expect(parseGameStatus('Stalemate')).toEqual({ type: 'Stalemate' });
+    });
+
+    it('parseGameStatus 应兼容已带 type 字段的对象', () => {
+      expect(parseGameStatus({ type: 'Check', player: 'Black' })).toEqual({
+        type: 'Check',
+        player: 'Black',
+      });
     });
   });
 

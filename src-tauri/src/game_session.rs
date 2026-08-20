@@ -6,12 +6,19 @@ use std::sync::{Arc, Mutex};
 use uuid::Uuid;
 
 use crate::game_engine::{GameEngine, XiangqiEngine, JunqiEngine};
+use crate::ai::Difficulty;
 
 /// 游戏类型枚举
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum GameType {
     Xiangqi,
     Junqi,
+}
+
+/// 带配置的会话条目
+pub struct ManagedSession {
+    pub session: GameSession,
+    pub difficulty: Difficulty,
 }
 
 /// 游戏会话，包装不同类型的游戏引擎
@@ -78,7 +85,7 @@ impl GameSession {
 /// 游戏会话管理器
 /// 使用线程安全的方式管理所有活动的游戏会话
 pub struct GameSessionManager {
-    sessions: Arc<Mutex<HashMap<String, GameSession>>>,
+    sessions: Arc<Mutex<HashMap<String, ManagedSession>>>,
 }
 
 impl GameSessionManager {
@@ -95,21 +102,27 @@ impl GameSessionManager {
     }
 
     /// 创建新的游戏会话并返回游戏 ID
-    pub fn create_session(&self, game_type: GameType) -> Result<String, String> {
+    pub fn create_session(
+        &self,
+        game_type: GameType,
+        difficulty: Difficulty,
+    ) -> Result<String, String> {
         let game_id = Self::generate_game_id();
-        let session = GameSession::new(game_type);
+        let managed = ManagedSession {
+            session: GameSession::new(game_type),
+            difficulty,
+        };
 
         let mut sessions = self.sessions.lock()
             .map_err(|e| format!("无法获取会话锁: {}", e))?;
 
-        sessions.insert(game_id.clone(), session);
+        sessions.insert(game_id.clone(), managed);
         Ok(game_id)
     }
 
     /// 获取游戏会话的引用
-    /// 获取游戏会话的引用
     #[allow(dead_code)]
-    pub fn get_session(&self, game_id: &str) -> Result<Arc<Mutex<HashMap<String, GameSession>>>, String> {
+    pub fn get_session(&self, game_id: &str) -> Result<Arc<Mutex<HashMap<String, ManagedSession>>>, String> {
         let sessions = self.sessions.lock()
             .map_err(|e| format!("无法获取会话锁: {}", e))?;
 
@@ -128,10 +141,10 @@ impl GameSessionManager {
         let sessions = self.sessions.lock()
             .map_err(|e| format!("无法获取会话锁: {}", e))?;
 
-        let session = sessions.get(game_id)
+        let managed = sessions.get(game_id)
             .ok_or_else(|| format!("游戏会话不存在: {}", game_id))?;
 
-        f(session)
+        f(&managed.session)
     }
 
     /// 执行对游戏会话的可变操作
@@ -142,10 +155,21 @@ impl GameSessionManager {
         let mut sessions = self.sessions.lock()
             .map_err(|e| format!("无法获取会话锁: {}", e))?;
 
-        let session = sessions.get_mut(game_id)
+        let managed = sessions.get_mut(game_id)
             .ok_or_else(|| format!("游戏会话不存在: {}", game_id))?;
 
-        f(session)
+        f(&mut managed.session)
+    }
+
+    /// 读取会话难度
+    pub fn get_difficulty(&self, game_id: &str) -> Result<Difficulty, String> {
+        let sessions = self.sessions.lock()
+            .map_err(|e| format!("无法获取会话锁: {}", e))?;
+
+        let managed = sessions.get(game_id)
+            .ok_or_else(|| format!("游戏会话不存在: {}", game_id))?;
+
+        Ok(managed.difficulty)
     }
 
     /// 删除游戏会话
@@ -198,7 +222,7 @@ mod tests {
     #[test]
     fn test_create_xiangqi_session() {
         let manager = GameSessionManager::new();
-        let game_id = manager.create_session(GameType::Xiangqi).unwrap();
+        let game_id = manager.create_session(GameType::Xiangqi, Difficulty::Medium).unwrap();
         
         assert!(!game_id.is_empty());
         
@@ -214,7 +238,7 @@ mod tests {
     #[test]
     fn test_create_junqi_session() {
         let manager = GameSessionManager::new();
-        let game_id = manager.create_session(GameType::Junqi).unwrap();
+        let game_id = manager.create_session(GameType::Junqi, Difficulty::Medium).unwrap();
         
         assert!(!game_id.is_empty());
         
@@ -230,8 +254,8 @@ mod tests {
     #[test]
     fn test_unique_game_ids() {
         let manager = GameSessionManager::new();
-        let game_id1 = manager.create_session(GameType::Xiangqi).unwrap();
-        let game_id2 = manager.create_session(GameType::Xiangqi).unwrap();
+        let game_id1 = manager.create_session(GameType::Xiangqi, Difficulty::Medium).unwrap();
+        let game_id2 = manager.create_session(GameType::Xiangqi, Difficulty::Medium).unwrap();
         
         assert_ne!(game_id1, game_id2);
     }
@@ -248,7 +272,7 @@ mod tests {
     #[test]
     fn test_remove_session() {
         let manager = GameSessionManager::new();
-        let game_id = manager.create_session(GameType::Xiangqi).unwrap();
+        let game_id = manager.create_session(GameType::Xiangqi, Difficulty::Medium).unwrap();
         
         // 验证会话存在
         assert!(manager.with_session(&game_id, |_| Ok(())).is_ok());
@@ -266,10 +290,10 @@ mod tests {
         
         assert_eq!(manager.session_count().unwrap(), 0);
         
-        let _game_id1 = manager.create_session(GameType::Xiangqi).unwrap();
+        let _game_id1 = manager.create_session(GameType::Xiangqi, Difficulty::Medium).unwrap();
         assert_eq!(manager.session_count().unwrap(), 1);
         
-        let _game_id2 = manager.create_session(GameType::Junqi).unwrap();
+        let _game_id2 = manager.create_session(GameType::Junqi, Difficulty::Medium).unwrap();
         assert_eq!(manager.session_count().unwrap(), 2);
     }
 
@@ -277,8 +301,8 @@ mod tests {
     fn test_clear_all_sessions() {
         let manager = GameSessionManager::new();
         
-        let _game_id1 = manager.create_session(GameType::Xiangqi).unwrap();
-        let _game_id2 = manager.create_session(GameType::Junqi).unwrap();
+        let _game_id1 = manager.create_session(GameType::Xiangqi, Difficulty::Medium).unwrap();
+        let _game_id2 = manager.create_session(GameType::Junqi, Difficulty::Medium).unwrap();
         
         assert_eq!(manager.session_count().unwrap(), 2);
         
@@ -290,7 +314,7 @@ mod tests {
     #[test]
     fn test_with_session_mut() {
         let manager = GameSessionManager::new();
-        let game_id = manager.create_session(GameType::Xiangqi).unwrap();
+        let game_id = manager.create_session(GameType::Xiangqi, Difficulty::Medium).unwrap();
         
         // 测试可变访问
         let result = manager.with_session_mut(&game_id, |session| {

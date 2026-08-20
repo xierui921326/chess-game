@@ -439,4 +439,44 @@ describe('BoardRenderer 属性测试', () => {
       }
     });
   });
+
+  describe('棋盘几何', () => {
+    const emptyBoard: BoardState = {
+      pieces: {},
+      current_player: 'Red',
+      move_history: [],
+    };
+
+    it('象棋画布应按 9×10 交叉点定尺寸，四边留白一致', () => {
+      const { container } = render(
+        <BoardRenderer
+          boardState={emptyBoard}
+          selectedPiece={null}
+          legalMoves={[]}
+          onCellClick={vi.fn()}
+          gameType="xiangqi"
+        />
+      );
+      const canvas = container.querySelector('canvas') as HTMLCanvasElement;
+      // fallback: cell=40, padding=21 → 8*40+42 × 9*40+42
+      expect(canvas).toHaveAttribute('width', '362');
+      expect(canvas).toHaveAttribute('height', '402');
+    });
+
+    it('军棋画布应按 5×12 交叉点定尺寸，避免右侧/底部多出一格空带', () => {
+      const { container } = render(
+        <BoardRenderer
+          boardState={emptyBoard}
+          selectedPiece={null}
+          legalMoves={[]}
+          onCellClick={vi.fn()}
+          gameType="junqi"
+        />
+      );
+      const canvas = container.querySelector('canvas') as HTMLCanvasElement;
+      // fallback: cell=40, radius=16, padding=22 → 4*40+44 × 11*40+44
+      expect(canvas).toHaveAttribute('width', '204');
+      expect(canvas).toHaveAttribute('height', '484');
+    });
+  });
 });

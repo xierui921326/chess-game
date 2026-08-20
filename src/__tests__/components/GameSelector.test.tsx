@@ -10,7 +10,7 @@ describe('GameSelector 组件', () => {
       
       // 检查标题是否存在
       expect(screen.getByText('棋类游戏')).toBeInTheDocument();
-      expect(screen.getByText('选择您想要玩的游戏')).toBeInTheDocument();
+      expect(screen.getByText('选择棋种，人机对战')).toBeInTheDocument();
     });
 
     it('应该显示中国象棋选项', () => {
@@ -18,7 +18,7 @@ describe('GameSelector 组件', () => {
       render(<GameSelector onGameSelect={mockOnGameSelect} />);
       
       expect(screen.getByText('中国象棋')).toBeInTheDocument();
-      expect(screen.getByText('经典的中国象棋游戏')).toBeInTheDocument();
+      expect(screen.getByText('标准规则 · 人机对战')).toBeInTheDocument();
     });
 
     it('应该显示军棋选项', () => {
@@ -26,7 +26,7 @@ describe('GameSelector 组件', () => {
       render(<GameSelector onGameSelect={mockOnGameSelect} />);
       
       expect(screen.getByText('军棋')).toBeInTheDocument();
-      expect(screen.getByText('策略性的军棋对战')).toBeInTheDocument();
+      expect(screen.getByText('二人翻棋 MVP · 暗棋对战')).toBeInTheDocument();
     });
 
     it('应该渲染两个游戏选项按钮', () => {

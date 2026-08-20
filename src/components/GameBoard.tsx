@@ -1,14 +1,24 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import BoardRenderer from './BoardRenderer';
-import type { BoardState, Position, GameStatus, MoveResult } from '../types';
+import type {
+  BoardState,
+  Difficulty,
+  GameStatus,
+  GameType,
+  MoveResult,
+  Player,
+  Position,
+} from '../types';
+import { DIFFICULTY_LABELS, parseGameStatus } from '../types';
 import './GameBoard.css';
-
-export type GameType = 'xiangqi' | 'junqi';
 
 interface GameBoardProps {
   gameType: GameType;
+  playerSide: Player;
+  difficulty: Difficulty;
   onBackToMenu: () => void;
+  onBackToSetup?: () => void;
 }
 
 interface GameState {
@@ -17,75 +27,118 @@ interface GameState {
   game_status: GameStatus;
 }
 
-const GameBoard: React.FC<GameBoardProps> = ({ gameType, onBackToMenu }) => {
+function normalizeGameState(raw: GameState): GameState {
+  return {
+    ...raw,
+    game_status: parseGameStatus(raw.game_status),
+  };
+}
+
+function normalizeMoveResult(raw: MoveResult): MoveResult {
+  return {
+    ...raw,
+    game_status: parseGameStatus(raw.game_status),
+  };
+}
+
+const GameBoard: React.FC<GameBoardProps> = ({
+  gameType,
+  playerSide,
+  difficulty,
+  onBackToMenu,
+  onBackToSetup,
+}) => {
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [selectedPiece, setSelectedPiece] = useState<Position | null>(null);
   const [legalMoves, setLegalMoves] = useState<Position[]>([]);
   const [isPlayerTurn, setIsPlayerTurn] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [resigned, setResigned] = useState(false);
+  const gameIdRef = useRef<string | null>(null);
 
-  // 初始化游戏
-  useEffect(() => {
-    startNewGame();
-  }, [gameType]);
+  const isGameOver = useCallback((status: GameStatus): boolean => {
+    return (
+      status.type === 'Checkmate' ||
+      status.type === 'Stalemate' ||
+      status.type === 'Victory'
+    );
+  }, []);
 
-  const startNewGame = async () => {
+  const makeAIMove = useCallback(
+    async (current: GameState) => {
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 400));
+
+        const result = normalizeMoveResult(
+          await invoke<MoveResult>('make_ai_move', {
+            gameId: current.game_id,
+          }),
+        );
+
+        if (result.success) {
+          setGameState({
+            game_id: current.game_id,
+            board_state: result.new_board_state,
+            game_status: result.game_status,
+          });
+
+          if (!isGameOver(result.game_status)) {
+            setIsPlayerTurn(true);
+          }
+        }
+      } catch (err) {
+        setError(`AI 移动失败: ${err}`);
+        console.error('Failed to make AI move:', err);
+        setIsPlayerTurn(true);
+      }
+    },
+    [isGameOver],
+  );
+
+  const startNewGame = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
-      const result = await invoke<GameState>('start_new_game', {
-        gameType: gameType,
-      });
-      setGameState(result);
+      setResigned(false);
       setSelectedPiece(null);
       setLegalMoves([]);
-      setIsPlayerTurn(true);
+
+      const result = normalizeGameState(
+        await invoke<GameState>('start_new_game', {
+          gameType,
+          difficulty,
+        }),
+      );
+
+      gameIdRef.current = result.game_id;
+      setGameState(result);
+
+      const humanToMove = result.board_state.current_player === playerSide;
+      setIsPlayerTurn(humanToMove);
+
+      if (!humanToMove && !isGameOver(result.game_status)) {
+        setIsPlayerTurn(false);
+        await makeAIMove(result);
+      }
     } catch (err) {
       setError(`启动游戏失败: ${err}`);
       console.error('Failed to start game:', err);
+      setGameState(null);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [gameType, difficulty, playerSide, isGameOver, makeAIMove]);
 
-  // 处理棋盘点击
-  const handleCellClick = async (position: Position) => {
-    if (!gameState || !isPlayerTurn) return;
+  useEffect(() => {
+    startNewGame();
+  }, [startNewGame]);
 
-    const posKey = `${position.row},${position.col}`;
-    const clickedPiece = gameState.board_state.pieces[posKey];
-
-    // 如果点击的是自己的棋子，选中它
-    if (clickedPiece && clickedPiece.player === gameState.board_state.current_player) {
-      // 如果点击已选中的棋子，取消选择
-      if (
-        selectedPiece &&
-        selectedPiece.row === position.row &&
-        selectedPiece.col === position.col
-      ) {
-        setSelectedPiece(null);
-        setLegalMoves([]);
-      } else {
-        // 选中新棋子
-        setSelectedPiece(position);
-        await fetchLegalMoves(position);
-      }
-    }
-    // 如果已经选中了棋子，尝试移动到点击的位置
-    else if (selectedPiece) {
-      await attemptMove(selectedPiece, position);
-    }
-  };
-
-  // 获取合法移动
-  const fetchLegalMoves = async (position: Position) => {
-    if (!gameState) return;
-
+  const fetchLegalMoves = async (position: Position, gameId: string) => {
     try {
       const moves = await invoke<Position[]>('get_legal_moves', {
-        gameId: gameState.game_id,
-        position: position,
+        gameId,
+        position,
       });
       setLegalMoves(moves);
     } catch (err) {
@@ -94,39 +147,34 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameType, onBackToMenu }) => {
     }
   };
 
-  // 尝试移动棋子
-  const attemptMove = async (from: Position, to: Position) => {
-    if (!gameState) return;
-
+  const attemptMove = async (from: Position, to: Position, current: GameState) => {
     try {
       setError(null);
-      const result = await invoke<MoveResult>('make_player_move', {
-        gameId: gameState.game_id,
-        from: from,
-        to: to,
-      });
+      const result = normalizeMoveResult(
+        await invoke<MoveResult>('make_player_move', {
+          gameId: current.game_id,
+          from,
+          to,
+        }),
+      );
 
       if (result.success) {
-        // 更新游戏状态
-        setGameState({
-          ...gameState,
+        const next: GameState = {
+          game_id: current.game_id,
           board_state: result.new_board_state,
           game_status: result.game_status,
-        });
-
-        // 清除选择
+        };
+        setGameState(next);
         setSelectedPiece(null);
         setLegalMoves([]);
 
-        // 检查游戏是否结束
         if (isGameOver(result.game_status)) {
           setIsPlayerTurn(false);
           return;
         }
 
-        // 轮到 AI
         setIsPlayerTurn(false);
-        await makeAIMove();
+        await makeAIMove(next);
       }
     } catch (err) {
       setError(`移动失败: ${err}`);
@@ -134,73 +182,65 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameType, onBackToMenu }) => {
     }
   };
 
-  // AI 移动
-  const makeAIMove = async () => {
-    if (!gameState) return;
+  const handleCellClick = async (position: Position) => {
+    if (!gameState || !isPlayerTurn || resigned) return;
 
-    try {
-      // 添加短暂延迟，让玩家看到自己的移动
-      await new Promise((resolve) => setTimeout(resolve, 500));
+    // 仅允许操作己方棋子
+    const posKey = `${position.row},${position.col}`;
+    const clickedPiece = gameState.board_state.pieces[posKey];
 
-      const result = await invoke<MoveResult>('make_ai_move', {
-        gameId: gameState.game_id,
-      });
-
-      if (result.success) {
-        setGameState({
-          ...gameState,
-          board_state: result.new_board_state,
-          game_status: result.game_status,
-        });
-
-        // 检查游戏是否结束
-        if (!isGameOver(result.game_status)) {
-          setIsPlayerTurn(true);
-        }
+    if (clickedPiece && clickedPiece.player === playerSide) {
+      if (
+        selectedPiece &&
+        selectedPiece.row === position.row &&
+        selectedPiece.col === position.col
+      ) {
+        setSelectedPiece(null);
+        setLegalMoves([]);
+      } else {
+        setSelectedPiece(position);
+        await fetchLegalMoves(position, gameState.game_id);
       }
-    } catch (err) {
-      setError(`AI 移动失败: ${err}`);
-      console.error('Failed to make AI move:', err);
-      setIsPlayerTurn(true);
+    } else if (selectedPiece) {
+      await attemptMove(selectedPiece, position, gameState);
     }
   };
 
-  // 检查游戏是否结束
-  const isGameOver = (status: GameStatus): boolean => {
-    return (
-      status.type === 'Checkmate' ||
-      status.type === 'Stalemate' ||
-      status.type === 'Victory'
-    );
-  };
-
-  // 悔棋
   const handleUndo = async () => {
     if (!gameState) return;
 
     try {
       setError(null);
-      const result = await invoke<GameState>('undo_move', {
-        gameId: gameState.game_id,
-      });
+      const result = normalizeGameState(
+        await invoke<GameState>('undo_move', {
+          gameId: gameState.game_id,
+        }),
+      );
       setGameState(result);
       setSelectedPiece(null);
       setLegalMoves([]);
-      setIsPlayerTurn(true);
+      setResigned(false);
+      setIsPlayerTurn(result.board_state.current_player === playerSide);
     } catch (err) {
       setError(`悔棋失败: ${err}`);
       console.error('Failed to undo move:', err);
     }
   };
 
-  // 重新开始
-  const handleRestart = async () => {
-    await startNewGame();
+  const handleResign = () => {
+    setResigned(true);
+    setIsPlayerTurn(false);
+    setSelectedPiece(null);
+    setLegalMoves([]);
   };
 
-  // 获取游戏状态文本
   const getGameStatusText = (): string => {
     if (!gameState) return '';
+
+    if (resigned) {
+      const winner = playerSide === 'Red' ? '黑方' : '红方';
+      return `您已认输，${winner}获胜`;
+    }
 
     const status = gameState.game_status;
     switch (status.type) {
@@ -219,7 +259,6 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameType, onBackToMenu }) => {
     }
   };
 
-  // 渲染加载状态
   if (isLoading) {
     return (
       <div className="game-board-container">
@@ -228,60 +267,107 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameType, onBackToMenu }) => {
     );
   }
 
-  // 渲染错误状态
   if (!gameState) {
     return (
       <div className="game-board-container">
         <div className="error">
-          <p>无法加载游戏</p>
-          <button onClick={onBackToMenu}>返回主菜单</button>
+          <p>{error || '无法加载游戏'}</p>
+          <button type="button" onClick={onBackToMenu}>
+            返回主菜单
+          </button>
+          {onBackToSetup && (
+            <button type="button" onClick={onBackToSetup}>
+              返回设置
+            </button>
+          )}
         </div>
       </div>
     );
   }
 
-  const canUndo = gameState.board_state.move_history && gameState.board_state.move_history.length > 0;
-  const gameOver = isGameOver(gameState.game_status);
+  const canUndo =
+    !!gameState.board_state.move_history &&
+    gameState.board_state.move_history.length > 0;
+  const gameOver = resigned || isGameOver(gameState.game_status);
+  const gameTitle = gameType === 'xiangqi' ? '中国象棋' : '军棋（翻棋）';
+  const statusText = getGameStatusText();
 
   return (
-    <div className="game-board-container">
+    <div className={`game-board-container layout-${gameType}`}>
       <div className="game-header">
-        <h1>{gameType === 'xiangqi' ? '中国象棋' : '军棋'}</h1>
-        <button className="back-button" onClick={onBackToMenu}>
-          返回主菜单
-        </button>
+        <div className="game-header-text">
+          <h1>{gameTitle}</h1>
+          <p className="game-meta">
+            执{playerSide === 'Red' ? '红' : '黑'} · {DIFFICULTY_LABELS[difficulty]}
+          </p>
+        </div>
+        <div className="header-actions">
+          {onBackToSetup && (
+            <button type="button" className="back-button secondary" onClick={onBackToSetup}>
+              对局设置
+            </button>
+          )}
+          <button type="button" className="back-button" onClick={onBackToMenu}>
+            返回主菜单
+          </button>
+        </div>
       </div>
 
-      <div className="game-status">
-        <p className={gameOver ? 'game-over' : ''}>{getGameStatusText()}</p>
-        {error && <p className="error-message">{error}</p>}
-      </div>
+      {statusText ? (
+        <div className="game-status">
+          <p className={gameOver ? 'game-over' : ''}>{statusText}</p>
+        </div>
+      ) : null}
+
+      {error ? (
+        <div className="game-error-banner" role="alert">
+          {error}
+        </div>
+      ) : null}
 
       <div className="board-area">
-      <BoardRenderer
-        boardState={gameState.board_state}
-        selectedPiece={selectedPiece}
-        legalMoves={legalMoves}
-        onCellClick={handleCellClick}
-        gameType={gameType}
-      />
+        <BoardRenderer
+          boardState={gameState.board_state}
+          selectedPiece={selectedPiece}
+          legalMoves={legalMoves}
+          onCellClick={handleCellClick}
+          gameType={gameType}
+        />
       </div>
 
       <div className="game-controls">
-        <button onClick={handleUndo} disabled={!canUndo || !isPlayerTurn || gameOver}>
+        <button
+          type="button"
+          onClick={handleUndo}
+          disabled={!canUndo || !isPlayerTurn || gameOver}
+        >
           悔棋
         </button>
-        <button onClick={handleRestart}>重新开始</button>
+        <button type="button" onClick={handleResign} disabled={gameOver || !isPlayerTurn}>
+          认输
+        </button>
+        <button type="button" onClick={startNewGame}>
+          重新开始
+        </button>
       </div>
 
       {gameOver && (
         <div className="game-over-overlay">
           <div className="game-over-dialog">
             <h2>游戏结束</h2>
-            <p>{getGameStatusText()}</p>
+            <p>{statusText}</p>
             <div className="game-over-buttons">
-              <button onClick={handleRestart}>再来一局</button>
-              <button onClick={onBackToMenu}>返回主菜单</button>
+              <button type="button" onClick={startNewGame}>
+                再来一局
+              </button>
+              {onBackToSetup && (
+                <button type="button" onClick={onBackToSetup}>
+                  调整设置
+                </button>
+              )}
+              <button type="button" onClick={onBackToMenu}>
+                返回主菜单
+              </button>
             </div>
           </div>
         </div>

@@ -1,0 +1,148 @@
+.setup-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.setup-card {
+  width: 100%;
+  max-width: 480px;
+  background: #fff;
+  border-radius: 1rem;
+  padding: 1.75rem 1.5rem 1.5rem;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
+}
+
+.setup-back {
+  display: inline-block;
+  margin-bottom: 1rem;
+  color: #667eea;
+  text-decoration: none;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.setup-back:hover {
+  text-decoration: underline;
+}
+
+.setup-title {
+  font-size: 1.75rem;
+  color: #2d3748;
+  margin-bottom: 0.35rem;
+}
+
+.setup-subtitle {
+  color: #718096;
+  margin-bottom: 1.5rem;
+  line-height: 1.5;
+}
+
+.setup-section {
+  margin-bottom: 1.35rem;
+}
+
+.setup-section h2 {
+  font-size: 1rem;
+  color: #4a5568;
+  margin-bottom: 0.65rem;
+}
+
+.setup-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.setup-option {
+  flex: 1;
+  min-width: 96px;
+  padding: 0.85rem 0.75rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 0.65rem;
+  background: #f7fafc;
+  color: #2d3748;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.setup-option-hint {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #a0aec0;
+}
+
+.setup-option:hover {
+  border-color: #a3bffa;
+}
+
+.setup-option.active {
+  border-color: #667eea;
+  background: #ebf4ff;
+  color: #434190;
+}
+
+.setup-option.active .setup-option-hint {
+  color: #667eea;
+}
+
+.setup-option.side-red.active {
+  border-color: #e53e3e;
+  background: #fff5f5;
+  color: #c53030;
+}
+
+.setup-option.side-red.active .setup-option-hint {
+  color: #fc8181;
+}
+
+.setup-option.side-black.active {
+  border-color: #2d3748;
+  background: #edf2f7;
+  color: #1a202c;
+}
+
+.setup-option.side-black.active .setup-option-hint {
+  color: #718096;
+}
+
+.setup-start {
+  width: 100%;
+  margin-top: 0.5rem;
+  padding: 0.9rem 1rem;
+  border: none;
+  border-radius: 0.65rem;
+  background: #667eea;
+  color: #fff;
+  font-size: 1.05rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.setup-start:hover {
+  background: #5a67d8;
+}
+
+.setup-start:active {
+  background: #4c51bf;
+}
+
+@media (max-width: 480px) {
+  .setup-card {
+    padding: 1.25rem 1rem 1.15rem;
+  }
+
+  .setup-title {
+    font-size: 1.45rem;
+  }
+}
